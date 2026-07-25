@@ -10,13 +10,15 @@ More details about the keyboard and build guide: [Sofle Choc Build GUide](https:
 * Hardware Supported: Sofle Choc PCB 2.x, ProMicro
 * Hardware Availability: [PCB & Case Data](https://github.com/josefadamcik/SofleKeyboard)
 
+This board uses a Pro Micro-footprint RP2040 clone controller, not the AVR Pro Micro the base `keyboard.json` targets; the `default` keymap's `rules.mk` sets `CONVERT_TO = promicro_rp2040` so builds target it automatically.
+
 Make example for this keyboard (after setting up your build environment):
 
-    make sofle_choc:default
+    make soflecat_macos:default
 
 Flashing example for this keyboard:
 
-    make sofle_choc:default:flash
+    make soflecat_macos:default:flash
 
 Press reset button twice on the keyboard when asked.
 
