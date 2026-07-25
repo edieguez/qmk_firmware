@@ -109,7 +109,7 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
  * |------+------+------+------+------+------|  Mute |                | Pause |------+------+------+------+------+------|
  * |OS_Sft|   Z  |   X  |   C  |   V  |   B  |-------|                |-------|   N  |   M  |   ,  |   .  |   /  |OS_Sft|
  * `-----------------------------------------/       /                \      \-----------------------------------------'
- *                       |      | NAV  | LGUI | Space| GEsc |    |Enter | Bspc | RGUI | FN   | Adj  |
+ *                       | Globe| NAV  | LGUI | Space| GEsc |    |Enter | Bspc | RGUI | FN   | Adj  |
  *                       `----------------------------------'              '------''---------------------------'
  */
     [_BASE] = LAYOUT(
@@ -117,7 +117,7 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
         KC_TAB,      KC_Q,          KC_W,          KC_E,          KC_R,          KC_T,                                          KC_Y,          KC_U,          KC_I,          KC_O,          KC_P,            KC_BSLS,
         TD(TD_CAPS), LALT_T(KC_A),  LCTL_T(KC_S),  LGUI_T(KC_D),  LSFT_T(KC_F),  KC_G,                                          KC_H,          RSFT_T(KC_J),  RGUI_T(KC_K),  RCTL_T(KC_L),  RALT_T(KC_SCLN), KC_QUOTE,
         OSM(MOD_LSFT), KC_Z,      KC_X,          KC_C,          KC_V,          KC_B,    KC_MUTE,             KC_MPLY,        KC_N,          KC_M,          KC_COMMA,      KC_DOT,        KC_SLASH,        OSM(MOD_RSFT),
-                                                    KC_NO,         MO(_NAV),      KC_LGUI,  KC_SPACE, QK_GESC, KC_ENTER, KC_BSPC, KC_RGUI, MO(_FN),       MO(_ADJUST)
+                                                    KC_LNG1,       MO(_NAV),      KC_LGUI,  KC_SPACE, QK_GESC, KC_ENTER, KC_BSPC, KC_RGUI, MO(_FN),       MO(_ADJUST)
     ),
 
 /*
