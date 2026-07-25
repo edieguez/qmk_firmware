@@ -1,7 +1,7 @@
 {
     "manufacturer": "Brian Low",
-    "keyboard_name": "Sofle Choc",
-    "maintainer": "Brian Low <github@brianlow.com>",
+    "keyboard_name": "Soflecat",
+    "maintainer": "edieguez <https://github.com/edieguez>",
     "build": {
         "lto": true
     },
