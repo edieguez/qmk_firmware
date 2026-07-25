@@ -101,7 +101,7 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
 /*
  * BASE
  * ,-----------------------------------------------------.                    ,-----------------------------------------------------.
- * | GEsc |  1/F1|  2/F2|  3/F3|  4/F4|  5/F5|                                 |  6/F6|  7/F7|  8/F8|  9/F9| 0/F10|   -  |
+ * |  ~`  |  1/F1|  2/F2|  3/F3|  4/F4|  5/F5|                                 |  6/F6|  7/F7|  8/F8|  9/F9| 0/F10|   -  |
  * |------+------+------+------+------+------|                                |------+------+------+------+------+------|
  * | Tab  |   Q  |   W  |   E  |   R  |   T  |                                 |   Y  |   U  |   I  |   O  |   P  |  \   |
  * |------+------+------+------+------+------|                                |------+------+------+------+------+------|
@@ -109,16 +109,15 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
  * |------+------+------+------+------+------|  Mute |                | Pause |------+------+------+------+------+------|
  * |OS_Sft|   Z  |   X  |   C  |   V  |   B  |-------|                |-------|   N  |   M  |   ,  |   .  |   /  |OS_Sft|
  * `-----------------------------------------/       /                \      \-----------------------------------------'
- *                       |      |      | MO1  | LGUI | /Space  /        \Enter \  |Bspc  | MO2  |      | Adj  |
- *                       |      |      |      |      |/       /          \      \ |      |      |      |      |
+ *                       |      | NAV  | LGUI | Space| GEsc |    |Enter | Bspc | RGUI | FN   | Adj  |
  *                       `----------------------------------'              '------''---------------------------'
  */
     [_BASE] = LAYOUT(
-        QK_GESC,     TD(TD_NUM_1),  TD(TD_NUM_2),  TD(TD_NUM_3),  TD(TD_NUM_4),  TD(TD_NUM_5),                                  TD(TD_NUM_6),  TD(TD_NUM_7),  TD(TD_NUM_8),  TD(TD_NUM_9),  TD(TD_NUM_0),    KC_MINUS,
+        KC_GRV,      TD(TD_NUM_1),  TD(TD_NUM_2),  TD(TD_NUM_3),  TD(TD_NUM_4),  TD(TD_NUM_5),                                  TD(TD_NUM_6),  TD(TD_NUM_7),  TD(TD_NUM_8),  TD(TD_NUM_9),  TD(TD_NUM_0),    KC_MINUS,
         KC_TAB,      KC_Q,          KC_W,          KC_E,          KC_R,          KC_T,                                          KC_Y,          KC_U,          KC_I,          KC_O,          KC_P,            KC_BSLS,
         TD(TD_CAPS), LALT_T(KC_A),  LCTL_T(KC_S),  LGUI_T(KC_D),  LSFT_T(KC_F),  KC_G,                                          KC_H,          RSFT_T(KC_J),  RGUI_T(KC_K),  RCTL_T(KC_L),  RALT_T(KC_SCLN), KC_QUOTE,
         OSM(MOD_LSFT), KC_Z,      KC_X,          KC_C,          KC_V,          KC_B,    KC_MUTE,             KC_MPLY,        KC_N,          KC_M,          KC_COMMA,      KC_DOT,        KC_SLASH,        OSM(MOD_RSFT),
-                                                    KC_NO,         KC_NO,         MO(_NAV),KC_LGUI,   KC_SPACE, KC_ENTER, KC_BSPC, MO(_FN), KC_NO,         MO(_ADJUST)
+                                                    KC_NO,         MO(_NAV),      KC_LGUI,  KC_SPACE, QK_GESC, KC_ENTER, KC_BSPC, KC_RGUI, MO(_FN),       MO(_ADJUST)
     ),
 
 /*
