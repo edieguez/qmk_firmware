@@ -17,7 +17,7 @@
 
 // Enabling this option changes the startup behavior to listen for an
 // active USB communication to delegate which part is master and which
-// is slave. With this option enabled and theres’s USB communication,
+// is slave. With this option enabled and there's USB communication,
 // then that half assumes it is the master, otherwise it assumes it
 // is the slave.
 //
@@ -25,6 +25,7 @@
 #define SPLIT_USB_DETECT
 
 #define SPLIT_WPM_ENABLE     // sync WPM from master to the slave half for the bongocat OLED
+#define SPLIT_ACTIVITY_ENABLE // sync matrix activity timestamps so the slave's OLED (bongocat) doesn't sleep mid-typing when it's only seeing keypresses from the other half
 #define RGB_MATRIX_MODE_NAME_ENABLE // enables rgb_matrix_get_mode_name() for the OLED status message
 #define RGB_MATRIX_SLEEP     // turn off effects when suspended
 #define SPLIT_TRANSPORT_MIRROR             // If LED_MATRIX_KEYPRESSES or LED_MATRIX_KEYRELEASES is enabled, you also will want to enable SPLIT_TRANSPORT_MIRROR

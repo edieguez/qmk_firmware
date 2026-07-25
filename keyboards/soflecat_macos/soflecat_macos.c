@@ -46,6 +46,7 @@ static void show_rgb_status(const char *label, uint8_t value) {
 // one changed most recently into rgb_status, for rgb_status_message() to
 // show for a few seconds.
 static void poll_rgb_status(void) {
+    static bool     initialized  = false;
     static bool     last_enabled = true;
     static uint8_t  last_mode    = 0;
     static uint8_t  last_hue     = 0;
@@ -62,7 +63,13 @@ static void poll_rgb_status(void) {
     uint8_t speed   = rgb_matrix_get_speed();
     uint8_t flags   = rgb_matrix_get_flags();
 
-    if (enabled != last_enabled) {
+    // Seed the baseline from real state on the first poll instead of diffing
+    // against the hardcoded initializers above -- otherwise the persisted
+    // RGB state almost never matches those defaults and this flashes a
+    // bogus status message on every boot.
+    if (!initialized) {
+        initialized = true;
+    } else if (enabled != last_enabled) {
         snprintf(rgb_status, sizeof(rgb_status), "RGB\n%s", enabled ? "ON" : "OFF");
         rgb_status_shown_until = timer_read32() + RGB_STATUS_DISPLAY_MS;
     } else if (mode != last_mode) {
