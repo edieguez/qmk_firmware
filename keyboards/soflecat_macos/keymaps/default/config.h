@@ -34,7 +34,6 @@
 // Home row mods (A/S/D/F, J/K/L/;): reduce accidental modifier triggers
 // during fast/rolled typing. See docs/tap_hold.md "Configuring Home Row Mods".
 #define TAPPING_TERM 200
-#define TAPPING_TERM_PER_KEY
 #define PERMISSIVE_HOLD
 #define CHORDAL_HOLD
 #define FLOW_TAP_TERM 150

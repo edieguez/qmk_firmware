@@ -79,29 +79,11 @@ const key_override_t *key_overrides[]     = {
     &delete_key_override,
 };
 
-// Shorter tapping term for the home row mods only, so they resolve to a tap
-// quickly during normal typing; everything else keeps the default TAPPING_TERM.
-uint16_t get_tapping_term(uint16_t keycode, keyrecord_t *record) {
-    switch (keycode) {
-        case LALT_T(KC_A):
-        case LCTL_T(KC_S):
-        case LGUI_T(KC_D):
-        case LSFT_T(KC_F):
-        case RSFT_T(KC_J):
-        case RGUI_T(KC_K):
-        case RCTL_T(KC_L):
-        case RALT_T(KC_SCLN):
-            return 149;
-        default:
-            return TAPPING_TERM;
-    }
-}
-
 const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
 /*
  * BASE
  * ,-----------------------------------------------------.                    ,-----------------------------------------------------.
- * |  ~`  |  1/F1|  2/F2|  3/F3|  4/F4|  5/F5|                                 |  6/F6|  7/F7|  8/F8|  9/F9| 0/F10|   -  |
+ * | GEsc |  1/F1|  2/F2|  3/F3|  4/F4|  5/F5|                                 |  6/F6|  7/F7|  8/F8|  9/F9| 0/F10|   -  |
  * |------+------+------+------+------+------|                                |------+------+------+------+------+------|
  * | Tab  |   Q  |   W  |   E  |   R  |   T  |                                 |   Y  |   U  |   I  |   O  |   P  |  \   |
  * |------+------+------+------+------+------|                                |------+------+------+------+------+------|
@@ -109,34 +91,39 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
  * |------+------+------+------+------+------|  Mute |                | Pause |------+------+------+------+------+------|
  * |OS_Sft|   Z  |   X  |   C  |   V  |   B  |-------|                |-------|   N  |   M  |   ,  |   .  |   /  |OS_Sft|
  * `-----------------------------------------/       /                \      \-----------------------------------------'
- *                       | Globe| NAV  | LGUI | Space| GEsc |    |Enter | Bspc | RGUI | FN   | Adj  |
+ *                       | Globe| NAV  | LGUI | Space| =/+  |    |Enter | Bspc | RGUI | FN   | Adj  |
  *                       `----------------------------------'              '------''---------------------------'
  */
     [_BASE] = LAYOUT(
-        KC_GRV,      TD(TD_NUM_1),  TD(TD_NUM_2),  TD(TD_NUM_3),  TD(TD_NUM_4),  TD(TD_NUM_5),                                  TD(TD_NUM_6),  TD(TD_NUM_7),  TD(TD_NUM_8),  TD(TD_NUM_9),  TD(TD_NUM_0),    KC_MINUS,
+        QK_GESC,     TD(TD_NUM_1),  TD(TD_NUM_2),  TD(TD_NUM_3),  TD(TD_NUM_4),  TD(TD_NUM_5),                                  TD(TD_NUM_6),  TD(TD_NUM_7),  TD(TD_NUM_8),  TD(TD_NUM_9),  TD(TD_NUM_0),    KC_MINUS,
         KC_TAB,      KC_Q,          KC_W,          KC_E,          KC_R,          KC_T,                                          KC_Y,          KC_U,          KC_I,          KC_O,          KC_P,            KC_BSLS,
         TD(TD_CAPS), LALT_T(KC_A),  LCTL_T(KC_S),  LGUI_T(KC_D),  LSFT_T(KC_F),  KC_G,                                          KC_H,          RSFT_T(KC_J),  RGUI_T(KC_K),  RCTL_T(KC_L),  RALT_T(KC_SCLN), KC_QUOTE,
         OSM(MOD_LSFT), KC_Z,      KC_X,          KC_C,          KC_V,          KC_B,    KC_MUTE,             KC_MPLY,        KC_N,          KC_M,          KC_COMMA,      KC_DOT,        KC_SLASH,        OSM(MOD_RSFT),
-                                                    KC_LNG1,       MO(_NAV),      KC_LGUI,  KC_SPACE, QK_GESC, KC_ENTER, KC_BSPC, KC_RGUI, MO(_FN),       MO(_ADJUST)
+                                                    KC_LNG1,       MO(_NAV),      KC_LGUI,  KC_SPACE, KC_EQUAL, KC_ENTER, KC_BSPC, KC_RGUI, MO(_FN),       MO(_ADJUST)
     ),
 
 /*
- * NAV -- arrows/Home/End/PgUp/PgDn (Delete is available everywhere via the
- * Shift+Backspace key override, so it doesn't need its own slot here)
+ * NAV -- arrows/Home/End/PgUp/PgDn, plus macOS-native word/line/document
+ * navigation and word-delete stacked directly around the arrow cluster:
+ * Option+Left/Right (word jump) above, Cmd+Left/Right (line start/end)
+ * below, Cmd+Up/Down (document start/end) above Up / below Down, and
+ * Option+Backspace/Delete (word delete) next to Home/End. Delete is
+ * available everywhere via the Shift+Backspace key override, so it doesn't
+ * need its own slot here.
  */
     [_NAV] = LAYOUT(
-        KC_TRNS,  KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS,                                     KC_TRNS, KC_TRNS, KC_TRNS,  KC_TRNS, KC_TRNS, KC_HOME,
-        KC_TRNS,  KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS,                                     KC_TRNS, KC_TRNS, KC_TRNS,  KC_TRNS, KC_TRNS, KC_END,
-        KC_TRNS,  KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS,                                     KC_LEFT, KC_DOWN, KC_UP,    KC_RIGHT,KC_TRNS, KC_PGUP,
-        KC_TRNS,  KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS,          KC_TRNS,           KC_TRNS, KC_TRNS, KC_TRNS,  KC_TRNS, KC_TRNS, KC_PGDN,
+        KC_TRNS,  KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS,                                     KC_TRNS,    KC_TRNS, KC_TRNS,   KC_TRNS,     A(KC_BSPC), KC_HOME,
+        KC_TRNS,  KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS,                                     A(KC_LEFT), KC_TRNS, G(KC_UP),  A(KC_RIGHT), A(KC_DEL),  KC_END,
+        KC_TRNS,  KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS,                                     KC_LEFT,    KC_DOWN, KC_UP,     KC_RIGHT,    KC_TRNS,    KC_PGUP,
+        KC_TRNS,  KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS,          KC_TRNS,           G(KC_LEFT), G(KC_DOWN), KC_TRNS, G(KC_RIGHT), KC_TRNS,   KC_PGDN,
                                     KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS,  KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS
     ),
 
 /*
- * FN -- F11/F12, [ and ] under I/O (Shift+ gives { and }), = under - (Shift+ gives +)
+ * FN -- F11/F12, [ and ] under I/O (Shift+ gives { and })
  */
     [_FN] = LAYOUT(
-        KC_TRNS,  KC_F11,  KC_F12,  KC_TRNS, KC_TRNS, KC_TRNS,                                     KC_TRNS, KC_TRNS, KC_TRNS,  KC_TRNS, KC_TRNS, KC_EQUAL,
+        KC_TRNS,  KC_F11,  KC_F12,  KC_TRNS, KC_TRNS, KC_TRNS,                                     KC_TRNS, KC_TRNS, KC_TRNS,  KC_TRNS, KC_TRNS, KC_TRNS,
         KC_TRNS,  KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS,                                     KC_TRNS, KC_TRNS, KC_LBRC,  KC_RBRC, KC_TRNS, KC_TRNS,
         KC_TRNS,  KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS,                                     KC_TRNS, KC_TRNS, KC_TRNS,  KC_TRNS, KC_TRNS, KC_TRNS,
         KC_TRNS,  KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS,          KC_TRNS,           KC_TRNS, KC_TRNS, KC_TRNS,  KC_TRNS, KC_TRNS, KC_TRNS,
@@ -159,7 +146,7 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
 
 #if defined(ENCODER_MAP_ENABLE)
 const uint16_t PROGMEM encoder_map[][NUM_ENCODERS][NUM_DIRECTIONS] = {
-    // Right encoder sends F14/F15, bound to volume down/up on macOS.
+    // Right encoder sends F14/F15, bound to brightness down/up on macOS.
     [_BASE]   = { ENCODER_CCW_CW(KC_VOLD, KC_VOLU), ENCODER_CCW_CW(KC_F14, KC_F15) },
     [_NAV]    = { ENCODER_CCW_CW(KC_TRNS, KC_TRNS), ENCODER_CCW_CW(KC_TRNS, KC_TRNS) },
     [_FN]     = { ENCODER_CCW_CW(KC_TRNS, KC_TRNS), ENCODER_CCW_CW(KC_TRNS, KC_TRNS) },
