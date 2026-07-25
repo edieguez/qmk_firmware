@@ -34,7 +34,29 @@ enum {
     TD_NUM_8,
     TD_NUM_9,
     TD_NUM_0,
+    // Caps Lock on tap, Caps Word toggle on double-tap.
+    TD_CAPS,
 };
+
+// ACTION_TAP_DANCE_DOUBLE's second tap is sent via register_code16(), which
+// only ever produces a raw HID report -- it bypasses process_record(), so it
+// can't reach quantum keycodes like CW_TOGG whose behavior lives entirely in
+// a process_record hook (process_caps_word.c). Caps Word's double-tap must
+// instead call caps_word_toggle() directly, hence the "advanced" dance below
+// instead of ACTION_TAP_DANCE_DOUBLE(KC_CAPS, CW_TOGG).
+static void caps_dance_finished(tap_dance_state_t *state, void *user_data) {
+    if (state->count == 1) {
+        register_code(KC_CAPS);
+    } else {
+        caps_word_toggle();
+    }
+}
+
+static void caps_dance_reset(tap_dance_state_t *state, void *user_data) {
+    if (state->count == 1) {
+        unregister_code(KC_CAPS);
+    }
+}
 
 tap_dance_action_t tap_dance_actions[] = {
     [TD_NUM_1] = ACTION_TAP_DANCE_DOUBLE(KC_1, KC_F1),
@@ -47,25 +69,28 @@ tap_dance_action_t tap_dance_actions[] = {
     [TD_NUM_8] = ACTION_TAP_DANCE_DOUBLE(KC_8, KC_F8),
     [TD_NUM_9] = ACTION_TAP_DANCE_DOUBLE(KC_9, KC_F9),
     [TD_NUM_0] = ACTION_TAP_DANCE_DOUBLE(KC_0, KC_F10),
+    [TD_CAPS]  = ACTION_TAP_DANCE_FN_ADVANCED(NULL, caps_dance_finished, caps_dance_reset),
 };
 
-// Shorter tapping term for the home row mods only, so they resolve to a tap
-// quickly during normal typing; everything else keeps the default TAPPING_TERM.
-uint16_t get_tapping_term(uint16_t keycode, keyrecord_t *record) {
-    switch (keycode) {
-        case LALT_T(KC_A):
-        case LCTL_T(KC_S):
-        case LGUI_T(KC_D):
-        case LSFT_T(KC_F):
-        case RSFT_T(KC_J):
-        case RGUI_T(KC_K):
-        case RCTL_T(KC_L):
-        case RALT_T(KC_SCLN):
-            return 149;
-        default:
-            return TAPPING_TERM;
-    }
-}
+// Shift+Backspace sends Delete on every layer, so a dedicated Del key isn't
+// needed anywhere in the keymap (see the _NAV layer).
+const key_override_t delete_key_override = ko_make_basic(MOD_MASK_SHIFT, KC_BSPC, KC_DEL);
+
+// Option+letter overrides for symbols that are awkward to reach otherwise
+// (no thumb/layer hold needed, and unlike Combos these only fire when
+// Option is actually held, so there's no simultaneous-press timing window
+// to misfire during normal typing). Option is already one reach away via
+// the LALT_T(KC_A)/RALT_T(KC_SCLN) home row mods.
+const key_override_t equal_key_override = ko_make_basic(MOD_MASK_ALT, KC_MINUS, KC_EQUAL);
+const key_override_t lbrc_key_override  = ko_make_basic(MOD_MASK_ALT, KC_I, KC_LBRC);
+const key_override_t rbrc_key_override  = ko_make_basic(MOD_MASK_ALT, KC_O, KC_RBRC);
+
+const key_override_t *key_overrides[] = {
+    &delete_key_override,
+    &equal_key_override,
+    &lbrc_key_override,
+    &rbrc_key_override,
+};
 
 const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
 /*
@@ -75,39 +100,68 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
  * |------+------+------+------+------+------|                                |------+------+------+------+------+------|
  * | Tab  |   Q  |   W  |   E  |   R  |   T  |                                 |   Y  |   U  |   I  |   O  |   P  |  \   |
  * |------+------+------+------+------+------|                                |------+------+------+------+------+------|
- * |Caps  |A/LAlt|S/LCtl|D/LGui|F/LSft|   G  |-------.                 ,-------|   H  |J/RSft|K/RGui|L/RCtl|;/RAlt|  '   |
+ * |Caps/CW|A/LAlt|S/LCtl|D/LGui|F/LSft|   G  |-------.                 ,-------|   H  |J/RSft|K/RGui|L/RCtl|;/RAlt|  '   |
  * |------+------+------+------+------+------|  Mute |                | Pause |------+------+------+------+------+------|
- * |LShift|   Z  |   X  |   C  |   V  |   B  |-------|                |-------|   N  |   M  |   ,  |   .  |   /  |RShift|
+ * |OS_Sft|   Z  |   X  |   C  |   V  |   B  |-------|                |-------|   N  |   M  |   ,  |   .  |   /  |OS_Sft|
  * `-----------------------------------------/       /                \      \-----------------------------------------'
- *                       |      |      | MO1  | LGUI | /Space  /        \Enter \  |Bspc  | MO2  |      | Adj  |
- *                       |      |      |      |      |/       /          \      \ |      |      |      |      |
+ *                       | Globe|  No  | NAV  | Cmd  | Space|    |Enter | Bspc | RGUI | FN   | Adj  |
  *                       `----------------------------------'              '------''---------------------------'
  */
     [_BASE] = LAYOUT(
         QK_GESC,     TD(TD_NUM_1),  TD(TD_NUM_2),  TD(TD_NUM_3),  TD(TD_NUM_4),  TD(TD_NUM_5),                                  TD(TD_NUM_6),  TD(TD_NUM_7),  TD(TD_NUM_8),  TD(TD_NUM_9),  TD(TD_NUM_0),    KC_MINUS,
         KC_TAB,      KC_Q,          KC_W,          KC_E,          KC_R,          KC_T,                                          KC_Y,          KC_U,          KC_I,          KC_O,          KC_P,            KC_BSLS,
-        KC_CAPS, LALT_T(KC_A),  LCTL_T(KC_S),  LGUI_T(KC_D),  LSFT_T(KC_F),  KC_G,                                          KC_H,          RSFT_T(KC_J),  RGUI_T(KC_K),  RCTL_T(KC_L),  RALT_T(KC_SCLN), KC_QUOTE,
-        KC_LSFT,   KC_Z,          KC_X,          KC_C,          KC_V,          KC_B,    KC_MUTE,             KC_MPLY,        KC_N,          KC_M,          KC_COMMA,      KC_DOT,        KC_SLASH,        KC_RSFT,
-                                                    KC_NO,         KC_NO,         MO(_NAV),KC_LGUI,   KC_SPACE, KC_ENTER, KC_BSPC, MO(_FN), KC_NO,         MO(_ADJUST)
+        TD(TD_CAPS), LALT_T(KC_A),  LCTL_T(KC_S),  LGUI_T(KC_D),  LSFT_T(KC_F),  KC_G,                                          KC_H,          RSFT_T(KC_J),  RGUI_T(KC_K),  RCTL_T(KC_L),  RALT_T(KC_SCLN), KC_QUOTE,
+        OSM(MOD_LSFT), KC_Z,      KC_X,          KC_C,          KC_V,          KC_B,    KC_MUTE,             KC_MPLY,        KC_N,          KC_M,          KC_COMMA,      KC_DOT,        KC_SLASH,        OSM(MOD_RSFT),
+                                                    KC_LNG1,       KC_NO,         MO(_NAV), KC_LGUI,  KC_SPACE, KC_ENTER, KC_BSPC, KC_RGUI, MO(_FN),       MO(_ADJUST)
     ),
 
 /*
- * NAV -- arrows/Home/End/PgUp/PgDn, plus Del in place of Bspc
+ * NAV -- arrows plus macOS-native word/line/document navigation stacked
+ * around the arrow cluster: Option+Left/Right (word jump) above, and
+ * Option+Backspace/Delete (word delete) next to it. macOS's own Home/End/
+ * PgUp/PgDn equivalents -- Cmd+Left/Right (line start/end) and Cmd+Up/Down
+ * (document start/end) -- live in the outer column, in that order, standing
+ * in for the raw Home/End/PgUp/PgDn keycodes (which macOS handles
+ * inconsistently). Delete is available everywhere via the Shift+Backspace
+ * key override, so it doesn't need its own slot here. Blank cells are
+ * transparent (same key as _BASE).
+ * ,-----------------------------------------------------.                    ,-----------------------------------------------------.
+ * |      |      |      |      |      |      |                                 |      |      |      |      |wBspc |LnStrt|
+ * |------+------+------+------+------+------|                                |------+------+------+------+------+------|
+ * |      |      |      |      |      |      |                                 | wLeft|      |      |wRight| wDel | LnEnd|
+ * |------+------+------+------+------+------|                                |------+------+------+------+------+------|
+ * |      |      |      |      |      |      |-------.                 ,-------|  Left|  Down|   Up | Right|      |DocTop|
+ * |------+------+------+------+------+------|       |                |       |------+------+------+------+------+------|
+ * |      |      |      |      |      |      |-------|                |-------|      |      |      |      |      |DocEnd|
+ * `-----------------------------------------/       /                \      \-----------------------------------------'
+ *                       |      |      |      |      |      |    |      |      |      |      |      |
+ *                       `----------------------------------'              '------''---------------------------'
  */
     [_NAV] = LAYOUT(
-        KC_TRNS,  KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS,                                     KC_TRNS, KC_TRNS, KC_TRNS,  KC_TRNS, KC_TRNS, KC_HOME,
-        KC_TRNS,  KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS,                                     KC_TRNS, KC_TRNS, KC_TRNS,  KC_TRNS, KC_TRNS, KC_END,
-        KC_TRNS,  KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS,                                     KC_LEFT, KC_DOWN, KC_UP,    KC_RIGHT,KC_TRNS, KC_PGUP,
-        KC_TRNS,  KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS,          KC_TRNS,           KC_TRNS, KC_TRNS, KC_TRNS,  KC_TRNS, KC_TRNS, KC_PGDN,
-                                    KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS,  KC_DEL,  KC_TRNS, KC_TRNS, KC_TRNS
+        KC_TRNS,  KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS,                                     KC_TRNS,    KC_TRNS, KC_TRNS,   KC_TRNS,     A(KC_BSPC), G(KC_LEFT),
+        KC_TRNS,  KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS,                                     A(KC_LEFT), KC_TRNS, KC_TRNS,   A(KC_RIGHT), A(KC_DEL),  G(KC_RIGHT),
+        KC_TRNS,  KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS,                                     KC_LEFT,    KC_DOWN, KC_UP,     KC_RIGHT,    KC_TRNS,    G(KC_UP),
+        KC_TRNS,  KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS,          KC_TRNS,           KC_TRNS,    KC_TRNS,    KC_TRNS, KC_TRNS,     KC_TRNS,   G(KC_DOWN),
+                                    KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS,  KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS
     ),
 
 /*
- * FN -- F11/F12, [ and ] under I/O (Shift+ gives { and }), = under - (Shift+ gives +)
+ * FN -- F11/F12. Blank cells are transparent (same key as _BASE).
+ * ,-----------------------------------------------------.                    ,-----------------------------------------------------.
+ * |      | F11  | F12  |      |      |      |                                 |      |      |      |      |      |      |
+ * |------+------+------+------+------+------|                                |------+------+------+------+------+------|
+ * |      |      |      |      |      |      |                                 |      |      |      |      |      |      |
+ * |------+------+------+------+------+------|                                |------+------+------+------+------+------|
+ * |      |      |      |      |      |      |-------.                 ,-------|      |      |      |      |      |      |
+ * |------+------+------+------+------+------|       |                |       |------+------+------+------+------+------|
+ * |      |      |      |      |      |      |-------|                |-------|      |      |      |      |      |      |
+ * `-----------------------------------------/       /                \      \-----------------------------------------'
+ *                       |      |      |      |      |      |    |      |      |      |      |      |
+ *                       `----------------------------------'              '------''---------------------------'
  */
     [_FN] = LAYOUT(
-        KC_TRNS,  KC_F11,  KC_F12,  KC_TRNS, KC_TRNS, KC_TRNS,                                     KC_TRNS, KC_TRNS, KC_TRNS,  KC_TRNS, KC_TRNS, KC_EQUAL,
-        KC_TRNS,  KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS,                                     KC_TRNS, KC_TRNS, KC_LBRC,  KC_RBRC, KC_TRNS, KC_TRNS,
+        KC_TRNS,  KC_F11,  KC_F12,  KC_TRNS, KC_TRNS, KC_TRNS,                                     KC_TRNS, KC_TRNS, KC_TRNS,  KC_TRNS, KC_TRNS, KC_TRNS,
+        KC_TRNS,  KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS,                                     KC_TRNS, KC_TRNS, KC_TRNS,  KC_TRNS, KC_TRNS, KC_TRNS,
         KC_TRNS,  KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS,                                     KC_TRNS, KC_TRNS, KC_TRNS,  KC_TRNS, KC_TRNS, KC_TRNS,
         KC_TRNS,  KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS,          KC_TRNS,           KC_TRNS, KC_TRNS, KC_TRNS,  KC_TRNS, KC_TRNS, KC_TRNS,
                                     KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS,  KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS
@@ -117,6 +171,18 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
  * ADJUST -- held via the right-outer thumb key. RGB toggle/mode/saturation/
  * brightness/flags as taps; Hue and Speed on the encoders (left = Hue,
  * right = Speed). QK_BOOT reflashes without the physical reset button.
+ * Blank cells are transparent (same key as _BASE).
+ * ,-----------------------------------------------------.                    ,-----------------------------------------------------.
+ * |RGBTog|Mode- |Mode+ | Sat- | Sat+ | Bri- |                                 | Bri+ |Flag+ |Flag- |      |      | Boot |
+ * |------+------+------+------+------+------|                                |------+------+------+------+------+------|
+ * |      |      |      |      |      |      |                                 |      |      |      |      |      |      |
+ * |------+------+------+------+------+------|                                |------+------+------+------+------+------|
+ * |      |      |      |      |      |      |-------.                 ,-------|      |      |      |      |      |      |
+ * |------+------+------+------+------+------|       |                |       |------+------+------+------+------+------|
+ * |      |      |      |      |      |      |-------|                |-------|      |      |      |      |      |      |
+ * `-----------------------------------------/       /                \      \-----------------------------------------'
+ *                       |      |      |      |      |      |    |      |      |      |      |      |
+ *                       `----------------------------------'              '------''---------------------------'
  */
     [_ADJUST] = LAYOUT(
         RM_TOGG,  RM_PREV, RM_NEXT,RM_SATD, RM_SATU, RM_VALD,                                     RM_VALU, RM_FLGP, RM_FLGN,  KC_TRNS, KC_TRNS, QK_BOOT,
@@ -129,6 +195,7 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
 
 #if defined(ENCODER_MAP_ENABLE)
 const uint16_t PROGMEM encoder_map[][NUM_ENCODERS][NUM_DIRECTIONS] = {
+    // Right encoder sends F14/F15, bound to brightness down/up on macOS.
     [_BASE]   = { ENCODER_CCW_CW(KC_VOLD, KC_VOLU), ENCODER_CCW_CW(KC_F14, KC_F15) },
     [_NAV]    = { ENCODER_CCW_CW(KC_TRNS, KC_TRNS), ENCODER_CCW_CW(KC_TRNS, KC_TRNS) },
     [_FN]     = { ENCODER_CCW_CW(KC_TRNS, KC_TRNS), ENCODER_CCW_CW(KC_TRNS, KC_TRNS) },
