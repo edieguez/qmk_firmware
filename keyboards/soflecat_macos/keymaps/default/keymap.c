@@ -75,8 +75,21 @@ tap_dance_action_t tap_dance_actions[] = {
 // Shift+Backspace sends Delete on every layer, so a dedicated Del key isn't
 // needed anywhere in the keymap (see the _NAV layer).
 const key_override_t delete_key_override = ko_make_basic(MOD_MASK_SHIFT, KC_BSPC, KC_DEL);
-const key_override_t *key_overrides[]     = {
+
+// Option+letter overrides for symbols that are awkward to reach otherwise
+// (no thumb/layer hold needed, and unlike Combos these only fire when
+// Option is actually held, so there's no simultaneous-press timing window
+// to misfire during normal typing). Option is already one reach away via
+// the LALT_T(KC_A)/RALT_T(KC_SCLN) home row mods.
+const key_override_t equal_key_override = ko_make_basic(MOD_MASK_ALT, KC_MINUS, KC_EQUAL);
+const key_override_t lbrc_key_override  = ko_make_basic(MOD_MASK_ALT, KC_I, KC_LBRC);
+const key_override_t rbrc_key_override  = ko_make_basic(MOD_MASK_ALT, KC_O, KC_RBRC);
+
+const key_override_t *key_overrides[] = {
     &delete_key_override,
+    &equal_key_override,
+    &lbrc_key_override,
+    &rbrc_key_override,
 };
 
 const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
@@ -103,40 +116,41 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
     ),
 
 /*
- * NAV -- arrows/Home/End/PgUp/PgDn, plus macOS-native word/line/document
- * navigation and word-delete stacked directly around the arrow cluster:
- * Option+Left/Right (word jump) above, Cmd+Left/Right (line start/end)
- * below, Cmd+Up/Down (document start/end) above Up / below Down, and
- * Option+Backspace/Delete (word delete) next to Home/End. Delete is
- * available everywhere via the Shift+Backspace key override, so it doesn't
- * need its own slot here. Blank cells are transparent (same key as _BASE).
+ * NAV -- arrows plus macOS-native word/line/document navigation stacked
+ * around the arrow cluster: Option+Left/Right (word jump) above, and
+ * Option+Backspace/Delete (word delete) next to it. macOS's own Home/End/
+ * PgUp/PgDn equivalents -- Cmd+Left/Right (line start/end) and Cmd+Up/Down
+ * (document start/end) -- live in the outer column, in that order, standing
+ * in for the raw Home/End/PgUp/PgDn keycodes (which macOS handles
+ * inconsistently). Delete is available everywhere via the Shift+Backspace
+ * key override, so it doesn't need its own slot here. Blank cells are
+ * transparent (same key as _BASE).
  * ,-----------------------------------------------------.                    ,-----------------------------------------------------.
- * |      |      |      |      |      |      |                                 |      |      |      |      |wBspc | Home |
+ * |      |      |      |      |      |      |                                 |      |      |      |      |wBspc |LnStrt|
  * |------+------+------+------+------+------|                                |------+------+------+------+------+------|
- * |      |      |      |      |      |      |                                 | wLeft|      |DocTop|wRight| wDel |  End |
+ * |      |      |      |      |      |      |                                 | wLeft|      |      |wRight| wDel | LnEnd|
  * |------+------+------+------+------+------|                                |------+------+------+------+------+------|
- * |      |      |      |      |      |      |-------.                 ,-------|  Left|  Down|   Up | Right|      | PgUp |
+ * |      |      |      |      |      |      |-------.                 ,-------|  Left|  Down|   Up | Right|      |DocTop|
  * |------+------+------+------+------+------|       |                |       |------+------+------+------+------+------|
- * |      |      |      |      |      |      |-------|                |-------|LnStrt|DocEnd|      |LnEnd |      | PgDn |
+ * |      |      |      |      |      |      |-------|                |-------|      |      |      |      |      |DocEnd|
  * `-----------------------------------------/       /                \      \-----------------------------------------'
  *                       |      |      |      |      |      |    |      |      |      |      |      |
  *                       `----------------------------------'              '------''---------------------------'
  */
     [_NAV] = LAYOUT(
-        KC_TRNS,  KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS,                                     KC_TRNS,    KC_TRNS, KC_TRNS,   KC_TRNS,     A(KC_BSPC), KC_HOME,
-        KC_TRNS,  KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS,                                     A(KC_LEFT), KC_TRNS, G(KC_UP),  A(KC_RIGHT), A(KC_DEL),  KC_END,
-        KC_TRNS,  KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS,                                     KC_LEFT,    KC_DOWN, KC_UP,     KC_RIGHT,    KC_TRNS,    KC_PGUP,
-        KC_TRNS,  KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS,          KC_TRNS,           G(KC_LEFT), G(KC_DOWN), KC_TRNS, G(KC_RIGHT), KC_TRNS,   KC_PGDN,
+        KC_TRNS,  KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS,                                     KC_TRNS,    KC_TRNS, KC_TRNS,   KC_TRNS,     A(KC_BSPC), G(KC_LEFT),
+        KC_TRNS,  KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS,                                     A(KC_LEFT), KC_TRNS, KC_TRNS,   A(KC_RIGHT), A(KC_DEL),  G(KC_RIGHT),
+        KC_TRNS,  KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS,                                     KC_LEFT,    KC_DOWN, KC_UP,     KC_RIGHT,    KC_TRNS,    G(KC_UP),
+        KC_TRNS,  KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS,          KC_TRNS,           KC_TRNS,    KC_TRNS,    KC_TRNS, KC_TRNS,     KC_TRNS,   G(KC_DOWN),
                                     KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS,  KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS
     ),
 
 /*
- * FN -- F11/F12, [ and ] under I/O (Shift+ gives { and }). Blank cells are
- * transparent (same key as _BASE).
+ * FN -- F11/F12. Blank cells are transparent (same key as _BASE).
  * ,-----------------------------------------------------.                    ,-----------------------------------------------------.
  * |      | F11  | F12  |      |      |      |                                 |      |      |      |      |      |      |
  * |------+------+------+------+------+------|                                |------+------+------+------+------+------|
- * |      |      |      |      |      |      |                                 |      |      |  [   |   ]  |      |      |
+ * |      |      |      |      |      |      |                                 |      |      |      |      |      |      |
  * |------+------+------+------+------+------|                                |------+------+------+------+------+------|
  * |      |      |      |      |      |      |-------.                 ,-------|      |      |      |      |      |      |
  * |------+------+------+------+------+------|       |                |       |------+------+------+------+------+------|
@@ -147,7 +161,7 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
  */
     [_FN] = LAYOUT(
         KC_TRNS,  KC_F11,  KC_F12,  KC_TRNS, KC_TRNS, KC_TRNS,                                     KC_TRNS, KC_TRNS, KC_TRNS,  KC_TRNS, KC_TRNS, KC_TRNS,
-        KC_TRNS,  KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS,                                     KC_TRNS, KC_TRNS, KC_LBRC,  KC_RBRC, KC_TRNS, KC_TRNS,
+        KC_TRNS,  KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS,                                     KC_TRNS, KC_TRNS, KC_TRNS,  KC_TRNS, KC_TRNS, KC_TRNS,
         KC_TRNS,  KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS,                                     KC_TRNS, KC_TRNS, KC_TRNS,  KC_TRNS, KC_TRNS, KC_TRNS,
         KC_TRNS,  KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS,          KC_TRNS,           KC_TRNS, KC_TRNS, KC_TRNS,  KC_TRNS, KC_TRNS, KC_TRNS,
                                     KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS,  KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS
