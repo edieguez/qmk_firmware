@@ -24,6 +24,14 @@
 // I've found this helps with some ProMicros where the slave does not boot
 #define SPLIT_USB_DETECT
 
+// SPLIT_USB_DETECT only knows "master" once USB fully enumerates -- a
+// power-only cable (no data lines) never gets there, so both halves time
+// out and both decide they're the slave, permanently (bongocat on both
+// OLEDs, no keys/RGB) until a manual power cycle. This reboots any half
+// stuck as "slave" that hasn't heard from a master, so it retries
+// detection on its own once a real data connection shows up.
+#define SPLIT_WATCHDOG_ENABLE
+
 #define SPLIT_WPM_ENABLE     // sync WPM from master to the slave half for the bongocat OLED
 #define SPLIT_ACTIVITY_ENABLE // sync matrix activity timestamps so the slave's OLED (bongocat) doesn't sleep mid-typing when it's only seeing keypresses from the other half
 #define RGB_MATRIX_MODE_NAME_ENABLE // enables rgb_matrix_get_mode_name() for the OLED status message
