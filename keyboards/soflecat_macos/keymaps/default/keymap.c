@@ -34,7 +34,29 @@ enum {
     TD_NUM_8,
     TD_NUM_9,
     TD_NUM_0,
+    // Caps Lock on tap, Caps Word toggle on double-tap.
+    TD_CAPS,
 };
+
+// ACTION_TAP_DANCE_DOUBLE's second tap is sent via register_code16(), which
+// only ever produces a raw HID report -- it bypasses process_record(), so it
+// can't reach quantum keycodes like CW_TOGG whose behavior lives entirely in
+// a process_record hook (process_caps_word.c). Caps Word's double-tap must
+// instead call caps_word_toggle() directly, hence the "advanced" dance below
+// instead of ACTION_TAP_DANCE_DOUBLE(KC_CAPS, CW_TOGG).
+static void caps_dance_finished(tap_dance_state_t *state, void *user_data) {
+    if (state->count == 1) {
+        register_code(KC_CAPS);
+    } else {
+        caps_word_toggle();
+    }
+}
+
+static void caps_dance_reset(tap_dance_state_t *state, void *user_data) {
+    if (state->count == 1) {
+        unregister_code(KC_CAPS);
+    }
+}
 
 tap_dance_action_t tap_dance_actions[] = {
     [TD_NUM_1] = ACTION_TAP_DANCE_DOUBLE(KC_1, KC_F1),
@@ -47,6 +69,14 @@ tap_dance_action_t tap_dance_actions[] = {
     [TD_NUM_8] = ACTION_TAP_DANCE_DOUBLE(KC_8, KC_F8),
     [TD_NUM_9] = ACTION_TAP_DANCE_DOUBLE(KC_9, KC_F9),
     [TD_NUM_0] = ACTION_TAP_DANCE_DOUBLE(KC_0, KC_F10),
+    [TD_CAPS]  = ACTION_TAP_DANCE_FN_ADVANCED(NULL, caps_dance_finished, caps_dance_reset),
+};
+
+// Shift+Backspace sends Delete on every layer, so a dedicated Del key isn't
+// needed anywhere in the keymap (see the _NAV layer).
+const key_override_t delete_key_override = ko_make_basic(MOD_MASK_SHIFT, KC_BSPC, KC_DEL);
+const key_override_t *key_overrides[]     = {
+    &delete_key_override,
 };
 
 // Shorter tapping term for the home row mods only, so they resolve to a tap
@@ -75,9 +105,9 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
  * |------+------+------+------+------+------|                                |------+------+------+------+------+------|
  * | Tab  |   Q  |   W  |   E  |   R  |   T  |                                 |   Y  |   U  |   I  |   O  |   P  |  \   |
  * |------+------+------+------+------+------|                                |------+------+------+------+------+------|
- * |Caps  |A/LAlt|S/LCtl|D/LGui|F/LSft|   G  |-------.                 ,-------|   H  |J/RSft|K/RGui|L/RCtl|;/RAlt|  '   |
+ * |Caps/CW|A/LAlt|S/LCtl|D/LGui|F/LSft|   G  |-------.                 ,-------|   H  |J/RSft|K/RGui|L/RCtl|;/RAlt|  '   |
  * |------+------+------+------+------+------|  Mute |                | Pause |------+------+------+------+------+------|
- * |LShift|   Z  |   X  |   C  |   V  |   B  |-------|                |-------|   N  |   M  |   ,  |   .  |   /  |RShift|
+ * |OS_Sft|   Z  |   X  |   C  |   V  |   B  |-------|                |-------|   N  |   M  |   ,  |   .  |   /  |OS_Sft|
  * `-----------------------------------------/       /                \      \-----------------------------------------'
  *                       |      |      | MO1  | LGUI | /Space  /        \Enter \  |Bspc  | MO2  |      | Adj  |
  *                       |      |      |      |      |/       /          \      \ |      |      |      |      |
@@ -86,20 +116,21 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
     [_BASE] = LAYOUT(
         QK_GESC,     TD(TD_NUM_1),  TD(TD_NUM_2),  TD(TD_NUM_3),  TD(TD_NUM_4),  TD(TD_NUM_5),                                  TD(TD_NUM_6),  TD(TD_NUM_7),  TD(TD_NUM_8),  TD(TD_NUM_9),  TD(TD_NUM_0),    KC_MINUS,
         KC_TAB,      KC_Q,          KC_W,          KC_E,          KC_R,          KC_T,                                          KC_Y,          KC_U,          KC_I,          KC_O,          KC_P,            KC_BSLS,
-        KC_CAPS, LALT_T(KC_A),  LCTL_T(KC_S),  LGUI_T(KC_D),  LSFT_T(KC_F),  KC_G,                                          KC_H,          RSFT_T(KC_J),  RGUI_T(KC_K),  RCTL_T(KC_L),  RALT_T(KC_SCLN), KC_QUOTE,
-        KC_LSFT,   KC_Z,          KC_X,          KC_C,          KC_V,          KC_B,    KC_MUTE,             KC_MPLY,        KC_N,          KC_M,          KC_COMMA,      KC_DOT,        KC_SLASH,        KC_RSFT,
+        TD(TD_CAPS), LALT_T(KC_A),  LCTL_T(KC_S),  LGUI_T(KC_D),  LSFT_T(KC_F),  KC_G,                                          KC_H,          RSFT_T(KC_J),  RGUI_T(KC_K),  RCTL_T(KC_L),  RALT_T(KC_SCLN), KC_QUOTE,
+        OSM(MOD_LSFT), KC_Z,      KC_X,          KC_C,          KC_V,          KC_B,    KC_MUTE,             KC_MPLY,        KC_N,          KC_M,          KC_COMMA,      KC_DOT,        KC_SLASH,        OSM(MOD_RSFT),
                                                     KC_NO,         KC_NO,         MO(_NAV),KC_LGUI,   KC_SPACE, KC_ENTER, KC_BSPC, MO(_FN), KC_NO,         MO(_ADJUST)
     ),
 
 /*
- * NAV -- arrows/Home/End/PgUp/PgDn, plus Del in place of Bspc
+ * NAV -- arrows/Home/End/PgUp/PgDn (Delete is available everywhere via the
+ * Shift+Backspace key override, so it doesn't need its own slot here)
  */
     [_NAV] = LAYOUT(
         KC_TRNS,  KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS,                                     KC_TRNS, KC_TRNS, KC_TRNS,  KC_TRNS, KC_TRNS, KC_HOME,
         KC_TRNS,  KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS,                                     KC_TRNS, KC_TRNS, KC_TRNS,  KC_TRNS, KC_TRNS, KC_END,
         KC_TRNS,  KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS,                                     KC_LEFT, KC_DOWN, KC_UP,    KC_RIGHT,KC_TRNS, KC_PGUP,
         KC_TRNS,  KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS,          KC_TRNS,           KC_TRNS, KC_TRNS, KC_TRNS,  KC_TRNS, KC_TRNS, KC_PGDN,
-                                    KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS,  KC_DEL,  KC_TRNS, KC_TRNS, KC_TRNS
+                                    KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS,  KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS
     ),
 
 /*
