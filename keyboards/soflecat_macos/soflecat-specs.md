@@ -10,7 +10,7 @@
   - Enter bootloader: double-tap the reset button on a half. It mounts as a USB mass-storage drive named `RPI-RP2`.
   - Flashing: drag-and-drop / copy the `.uf2` file onto that drive; the board reboots automatically into firmware.
 - **USB VID/PID**: `0x424C` / `0x5343` (identified via `lsusb`, matches `keyboard.json`).
-- **Lighting**: WS2812 (SK6812 Mini-E) per-key RGB LEDs. `RGBLED_NUM 70`, split `{35,35}` (35 LEDs per half).
+- **Lighting**: WS2812 (SK6812 Mini-E) per-key RGB LEDs. Per `keyboard.json`'s `rgb_matrix.split_count`, 58 LEDs total, split `[29, 29]` (29 per half).
 - **Displays**: OLED screen on each half (I2C).
 - **Encoders**: One rotary encoder per half (pin_a F5 / pin_b F4 in the AVR-pinout keyboard.json, translated via the converter for RP2040).
 - **Split link**: TRRS cable between halves.
