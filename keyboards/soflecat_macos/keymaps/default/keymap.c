@@ -22,21 +22,35 @@ enum layers {
     _ADJUST,
 };
 
-// Number row: tap for the digit, double-tap for the matching F-key.
 enum {
-    TD_NUM_1 = 0,
-    TD_NUM_2,
-    TD_NUM_3,
-    TD_NUM_4,
-    TD_NUM_5,
-    TD_NUM_6,
-    TD_NUM_7,
-    TD_NUM_8,
-    TD_NUM_9,
-    TD_NUM_0,
     // Caps Lock on tap, Caps Word toggle on double-tap.
-    TD_CAPS,
+    TD_CAPS = 0,
 };
+
+enum custom_keycodes {
+    // Sends the real macOS Globe-key Consumer-page usage (AC Next Keyboard
+    // Layout Select, 0x29D) via a raw HID consumer report. KC_LNG1 (Keyboard
+    // LANG1, HID Keyboard-page 0x90) looks superficially similar but is a
+    // Korean Hangul/English IME toggle, unrelated to macOS's physical Globe
+    // key -- it never triggered the System Settings > Keyboard > "Press
+    // Globe key to" behavior. QMK core has no keycode wired to 0x29D, so
+    // it's sent manually below.
+    MACOS_GLOBE = SAFE_RANGE,
+};
+
+bool process_record_user(uint16_t keycode, keyrecord_t *record) {
+    switch (keycode) {
+        case MACOS_GLOBE:
+            if (record->event.pressed) {
+                host_consumer_send(AC_NEXT_KEYBOARD_LAYOUT_SELECT);
+            } else {
+                host_consumer_send(0);
+            }
+            return false;
+        default:
+            return true;
+    }
+}
 
 // ACTION_TAP_DANCE_DOUBLE's second tap is sent via register_code16(), which
 // only ever produces a raw HID report -- it bypasses process_record(), so it
@@ -59,22 +73,25 @@ static void caps_dance_reset(tap_dance_state_t *state, void *user_data) {
 }
 
 tap_dance_action_t tap_dance_actions[] = {
-    [TD_NUM_1] = ACTION_TAP_DANCE_DOUBLE(KC_1, KC_F1),
-    [TD_NUM_2] = ACTION_TAP_DANCE_DOUBLE(KC_2, KC_F2),
-    [TD_NUM_3] = ACTION_TAP_DANCE_DOUBLE(KC_3, KC_F3),
-    [TD_NUM_4] = ACTION_TAP_DANCE_DOUBLE(KC_4, KC_F4),
-    [TD_NUM_5] = ACTION_TAP_DANCE_DOUBLE(KC_5, KC_F5),
-    [TD_NUM_6] = ACTION_TAP_DANCE_DOUBLE(KC_6, KC_F6),
-    [TD_NUM_7] = ACTION_TAP_DANCE_DOUBLE(KC_7, KC_F7),
-    [TD_NUM_8] = ACTION_TAP_DANCE_DOUBLE(KC_8, KC_F8),
-    [TD_NUM_9] = ACTION_TAP_DANCE_DOUBLE(KC_9, KC_F9),
-    [TD_NUM_0] = ACTION_TAP_DANCE_DOUBLE(KC_0, KC_F10),
-    [TD_CAPS]  = ACTION_TAP_DANCE_FN_ADVANCED(NULL, caps_dance_finished, caps_dance_reset),
+    [TD_CAPS] = ACTION_TAP_DANCE_FN_ADVANCED(NULL, caps_dance_finished, caps_dance_reset),
 };
 
-// Shift+Backspace sends Delete on every layer, so a dedicated Del key isn't
-// needed anywhere in the keymap (see the _NAV layer).
-const key_override_t delete_key_override = ko_make_basic(MOD_MASK_SHIFT, KC_BSPC, KC_DEL);
+// Option+Backspace sends Delete on every layer, so a dedicated Del key isn't
+// needed anywhere in the keymap. This doesn't fire on the _NAV layer's own
+// Backspace key, which sends Option+Backspace (word delete) baked in as its
+// own keycode rather than as a live Option+physical-Backspace chord, so the
+// two don't collide.
+const key_override_t delete_key_override = ko_make_basic(MOD_MASK_ALT, KC_BSPC, KC_DEL);
+
+// Shift+Esc sends ~, replacing Grave Escape (QK_GESC), whose built-in
+// GUI-held case is broken on macOS: Cmd+Esc there sends Cmd+` (grave),
+// which macOS intercepts as "move focus to next window" instead of
+// passing through -- so Cmd+Esc previously did nothing, including
+// failing to cancel Cmd+Tab's app switcher. Plain KC_ESC plus this single
+// override (QMK's own documented fix, see docs/features/key_overrides.md)
+// fixes that: Cmd+Esc now falls through untouched as plain Escape with
+// Cmd still held, while Shift+Esc keeps working as before.
+const key_override_t tilde_esc_override = ko_make_basic(MOD_MASK_SHIFT, KC_ESC, S(KC_GRV));
 
 // Option+letter overrides for symbols that are awkward to reach otherwise
 // (no thumb/layer hold needed, and unlike Combos these only fire when
@@ -87,6 +104,7 @@ const key_override_t rbrc_key_override  = ko_make_basic(MOD_MASK_ALT, KC_O, KC_R
 
 const key_override_t *key_overrides[] = {
     &delete_key_override,
+    &tilde_esc_override,
     &equal_key_override,
     &lbrc_key_override,
     &rbrc_key_override,
@@ -94,9 +112,10 @@ const key_override_t *key_overrides[] = {
 
 const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
 /*
- * BASE
+ * BASE -- the Globe thumb key is MACOS_GLOBE, a custom keycode (see above),
+ * not a plain keycode.
  * ,-----------------------------------------------------.                    ,-----------------------------------------------------.
- * | GEsc |  1/F1|  2/F2|  3/F3|  4/F4|  5/F5|                                 |  6/F6|  7/F7|  8/F8|  9/F9| 0/F10|   -  |
+ * | Esc  |   1  |   2  |   3  |   4  |   5  |                                 |   6  |   7  |   8  |   9  |   0  |   -  |
  * |------+------+------+------+------+------|                                |------+------+------+------+------+------|
  * | Tab  |   Q  |   W  |   E  |   R  |   T  |                                 |   Y  |   U  |   I  |   O  |   P  |  \   |
  * |------+------+------+------+------+------|                                |------+------+------+------+------+------|
@@ -104,53 +123,55 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
  * |------+------+------+------+------+------|  Mute |                | Pause |------+------+------+------+------+------|
  * |OS_Sft|   Z  |   X  |   C  |   V  |   B  |-------|                |-------|   N  |   M  |   ,  |   .  |   /  |OS_Sft|
  * `-----------------------------------------/       /                \      \-----------------------------------------'
- *                       | Globe|  No  | NAV  | Cmd  | Space|    |Enter | Bspc | RGUI | FN   | Adj  |
+ *                       | Globe|  No  |  No  | NAV  | Space|    |Enter | Bspc |  FN  | Adj  |  No  |
  *                       `----------------------------------'              '------''---------------------------'
  */
     [_BASE] = LAYOUT(
-        QK_GESC,     TD(TD_NUM_1),  TD(TD_NUM_2),  TD(TD_NUM_3),  TD(TD_NUM_4),  TD(TD_NUM_5),                                  TD(TD_NUM_6),  TD(TD_NUM_7),  TD(TD_NUM_8),  TD(TD_NUM_9),  TD(TD_NUM_0),    KC_MINUS,
+        KC_ESC,      KC_1,          KC_2,          KC_3,          KC_4,          KC_5,                                          KC_6,          KC_7,          KC_8,          KC_9,          KC_0,            KC_MINUS,
         KC_TAB,      KC_Q,          KC_W,          KC_E,          KC_R,          KC_T,                                          KC_Y,          KC_U,          KC_I,          KC_O,          KC_P,            KC_BSLS,
         TD(TD_CAPS), LALT_T(KC_A),  LCTL_T(KC_S),  LGUI_T(KC_D),  LSFT_T(KC_F),  KC_G,                                          KC_H,          RSFT_T(KC_J),  RGUI_T(KC_K),  RCTL_T(KC_L),  RALT_T(KC_SCLN), KC_QUOTE,
         OSM(MOD_LSFT), KC_Z,      KC_X,          KC_C,          KC_V,          KC_B,    KC_MUTE,             KC_MPLY,        KC_N,          KC_M,          KC_COMMA,      KC_DOT,        KC_SLASH,        OSM(MOD_RSFT),
-                                                    KC_LNG1,       KC_NO,         MO(_NAV), KC_LGUI,  KC_SPACE, KC_ENTER, KC_BSPC, KC_RGUI, MO(_FN),       MO(_ADJUST)
+                                                    MACOS_GLOBE,   KC_NO,         KC_NO,    MO(_NAV), KC_SPACE, KC_ENTER, KC_BSPC, MO(_FN), MO(_ADJUST),   KC_NO
     ),
 
 /*
  * NAV -- arrows plus macOS-native word/line/document navigation stacked
  * around the arrow cluster: Option+Left/Right (word jump) above, and
- * Option+Backspace/Delete (word delete) next to it. macOS's own Home/End/
- * PgUp/PgDn equivalents -- Cmd+Left/Right (line start/end) and Cmd+Up/Down
- * (document start/end) -- live in the outer column, in that order, standing
- * in for the raw Home/End/PgUp/PgDn keycodes (which macOS handles
- * inconsistently). Delete is available everywhere via the Shift+Backspace
- * key override, so it doesn't need its own slot here. Blank cells are
- * transparent (same key as _BASE).
+ * Option+Delete (word delete) next to it. macOS's own Home/End/PgUp/PgDn
+ * equivalents -- Cmd+Left/Right (line start/end) and Cmd+Up/Down (document
+ * start/end) -- live in the outer column, in that order, standing in for the
+ * raw Home/End/PgUp/PgDn keycodes (which macOS handles inconsistently). The
+ * thumb-cluster Backspace key sends Option+Backspace here (word delete
+ * backwards), and the thumb-cluster Enter key sends Shift+Enter (newline
+ * without submitting, for chat apps), each overriding its _BASE meaning.
+ * Blank cells are transparent (same key as _BASE).
  * ,-----------------------------------------------------.                    ,-----------------------------------------------------.
- * |      |      |      |      |      |      |                                 |      |      |      |      |wBspc |LnStrt|
+ * |      |      |      |      |      |      |                                 |      |      |      |      |      |LnStrt|
  * |------+------+------+------+------+------|                                |------+------+------+------+------+------|
- * |      |      |      |      |      |      |                                 | wLeft|      |      |wRight| wDel | LnEnd|
+ * |      |      |      |      |      |      |                                 | wLeft|      |      |wRight|     | LnEnd|
  * |------+------+------+------+------+------|                                |------+------+------+------+------+------|
  * |      |      |      |      |      |      |-------.                 ,-------|  Left|  Down|   Up | Right|      |DocTop|
  * |------+------+------+------+------+------|       |                |       |------+------+------+------+------+------|
  * |      |      |      |      |      |      |-------|                |-------|      |      |      |      |      |DocEnd|
  * `-----------------------------------------/       /                \      \-----------------------------------------'
- *                       |      |      |      |      |      |    |      |      |      |      |      |
+ *                       |      |      |      |      |      |    |ShfEnt| wBspc|      |      |      |
  *                       `----------------------------------'              '------''---------------------------'
  */
     [_NAV] = LAYOUT(
-        KC_TRNS,  KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS,                                     KC_TRNS,    KC_TRNS, KC_TRNS,   KC_TRNS,     A(KC_BSPC), G(KC_LEFT),
-        KC_TRNS,  KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS,                                     A(KC_LEFT), KC_TRNS, KC_TRNS,   A(KC_RIGHT), A(KC_DEL),  G(KC_RIGHT),
+        KC_TRNS,  KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS,                                     KC_TRNS,    KC_TRNS, KC_TRNS,   KC_TRNS,     KC_TRNS,    G(KC_LEFT),
+        KC_TRNS,  KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS,                                     A(KC_LEFT), KC_TRNS, KC_TRNS,   A(KC_RIGHT), KC_TRNS,   G(KC_RIGHT),
         KC_TRNS,  KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS,                                     KC_LEFT,    KC_DOWN, KC_UP,     KC_RIGHT,    KC_TRNS,    G(KC_UP),
         KC_TRNS,  KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS,          KC_TRNS,           KC_TRNS,    KC_TRNS,    KC_TRNS, KC_TRNS,     KC_TRNS,   G(KC_DOWN),
-                                    KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS,  KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS
+                                    KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, S(KC_ENTER),  A(KC_BSPC), KC_TRNS, KC_TRNS, KC_TRNS
     ),
 
 /*
- * FN -- F11/F12. Blank cells are transparent (same key as _BASE).
+ * FN -- F1-F12 on the number row (F11/F12 on T/Y). Blank cells are
+ * transparent (same key as _BASE).
  * ,-----------------------------------------------------.                    ,-----------------------------------------------------.
- * |      | F11  | F12  |      |      |      |                                 |      |      |      |      |      |      |
+ * |      |  F1  |  F2  |  F3  |  F4  |  F5  |                                 |  F6  |  F7  |  F8  |  F9  |  F10 |      |
  * |------+------+------+------+------+------|                                |------+------+------+------+------+------|
- * |      |      |      |      |      |      |                                 |      |      |      |      |      |      |
+ * |      |      |      |      |      |  F11 |                                 |  F12 |      |      |      |      |      |
  * |------+------+------+------+------+------|                                |------+------+------+------+------+------|
  * |      |      |      |      |      |      |-------.                 ,-------|      |      |      |      |      |      |
  * |------+------+------+------+------+------|       |                |       |------+------+------+------+------+------|
@@ -160,8 +181,8 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
  *                       `----------------------------------'              '------''---------------------------'
  */
     [_FN] = LAYOUT(
-        KC_TRNS,  KC_F11,  KC_F12,  KC_TRNS, KC_TRNS, KC_TRNS,                                     KC_TRNS, KC_TRNS, KC_TRNS,  KC_TRNS, KC_TRNS, KC_TRNS,
-        KC_TRNS,  KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS,                                     KC_TRNS, KC_TRNS, KC_TRNS,  KC_TRNS, KC_TRNS, KC_TRNS,
+        KC_TRNS,  KC_F1,   KC_F2,   KC_F3,   KC_F4,   KC_F5,                                       KC_F6,   KC_F7,   KC_F8,    KC_F9,   KC_F10,  KC_TRNS,
+        KC_TRNS,  KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_F11,                                       KC_F12,  KC_TRNS, KC_TRNS,  KC_TRNS, KC_TRNS, KC_TRNS,
         KC_TRNS,  KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS,                                     KC_TRNS, KC_TRNS, KC_TRNS,  KC_TRNS, KC_TRNS, KC_TRNS,
         KC_TRNS,  KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS,          KC_TRNS,           KC_TRNS, KC_TRNS, KC_TRNS,  KC_TRNS, KC_TRNS, KC_TRNS,
                                     KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS,  KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS
