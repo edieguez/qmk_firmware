@@ -58,6 +58,16 @@ tap_dance_action_t tap_dance_actions[] = {
 // two don't collide.
 const key_override_t delete_key_override = ko_make_basic(MOD_MASK_ALT, KC_BSPC, KC_DEL);
 
+// Shift+Esc sends ~, replacing Grave Escape (QK_GESC), whose built-in
+// GUI-held case is broken on macOS: Cmd+Esc there sends Cmd+` (grave),
+// which macOS intercepts as "move focus to next window" instead of
+// passing through -- so Cmd+Esc previously did nothing, including
+// failing to cancel Cmd+Tab's app switcher. Plain KC_ESC plus this single
+// override (QMK's own documented fix, see docs/features/key_overrides.md)
+// fixes that: Cmd+Esc now falls through untouched as plain Escape with
+// Cmd still held, while Shift+Esc keeps working as before.
+const key_override_t tilde_esc_override = ko_make_basic(MOD_MASK_SHIFT, KC_ESC, S(KC_GRV));
+
 // Option+letter overrides for symbols that are awkward to reach otherwise
 // (no thumb/layer hold needed, and unlike Combos these only fire when
 // Option is actually held, so there's no simultaneous-press timing window
@@ -69,6 +79,7 @@ const key_override_t rbrc_key_override  = ko_make_basic(MOD_MASK_ALT, KC_O, KC_R
 
 const key_override_t *key_overrides[] = {
     &delete_key_override,
+    &tilde_esc_override,
     &equal_key_override,
     &lbrc_key_override,
     &rbrc_key_override,
@@ -78,7 +89,7 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
 /*
  * BASE
  * ,-----------------------------------------------------.                    ,-----------------------------------------------------.
- * | GEsc |   1  |   2  |   3  |   4  |   5  |                                 |   6  |   7  |   8  |   9  |   0  |   -  |
+ * | Esc  |   1  |   2  |   3  |   4  |   5  |                                 |   6  |   7  |   8  |   9  |   0  |   -  |
  * |------+------+------+------+------+------|                                |------+------+------+------+------+------|
  * | Tab  |   Q  |   W  |   E  |   R  |   T  |                                 |   Y  |   U  |   I  |   O  |   P  |  \   |
  * |------+------+------+------+------+------|                                |------+------+------+------+------+------|
@@ -90,7 +101,7 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
  *                       `----------------------------------'              '------''---------------------------'
  */
     [_BASE] = LAYOUT(
-        QK_GESC,     KC_1,          KC_2,          KC_3,          KC_4,          KC_5,                                          KC_6,          KC_7,          KC_8,          KC_9,          KC_0,            KC_MINUS,
+        KC_ESC,      KC_1,          KC_2,          KC_3,          KC_4,          KC_5,                                          KC_6,          KC_7,          KC_8,          KC_9,          KC_0,            KC_MINUS,
         KC_TAB,      KC_Q,          KC_W,          KC_E,          KC_R,          KC_T,                                          KC_Y,          KC_U,          KC_I,          KC_O,          KC_P,            KC_BSLS,
         TD(TD_CAPS), LALT_T(KC_A),  LCTL_T(KC_S),  LGUI_T(KC_D),  LSFT_T(KC_F),  KC_G,                                          KC_H,          RSFT_T(KC_J),  RGUI_T(KC_K),  RCTL_T(KC_L),  RALT_T(KC_SCLN), KC_QUOTE,
         OSM(MOD_LSFT), KC_Z,      KC_X,          KC_C,          KC_V,          KC_B,    KC_MUTE,             KC_MPLY,        KC_N,          KC_M,          KC_COMMA,      KC_DOT,        KC_SLASH,        OSM(MOD_RSFT),
