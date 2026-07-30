@@ -111,8 +111,91 @@ static const char *rgb_status_message(void) {
     return rgb_status;
 }
 
+#endif
+
+// Rolling log of recently typed characters, shown on the master OLED's last
+// row. Only keys with an obvious single-character representation are logged
+// (letters, digits, space, and the punctuation keys reachable on _BASE);
+// modifiers, layer keys, and navigation/function keys are silently skipped.
+// Tap dance's second tap and key-override replacements bypass process_record
+// entirely (see the TD_CAPS comment above and quantum/process_key_override.c),
+// so neither one reaches this log -- consistent with the rest of the keymap's
+// handling of those two features.
+#define KEYLOG_LEN 21
+static char keylog[KEYLOG_LEN + 1];
+
+static char keycode_to_char(uint16_t keycode) {
+    if (keycode >= KC_A && keycode <= KC_Z) {
+        return 'a' + (keycode - KC_A);
+    }
+    if (keycode >= KC_1 && keycode <= KC_9) {
+        return '1' + (keycode - KC_1);
+    }
+    switch (keycode) {
+        case KC_0:
+            return '0';
+        case KC_SPACE:
+            return ' ';
+        case KC_MINUS:
+            return '-';
+        case KC_EQUAL:
+            return '=';
+        case KC_LBRC:
+            return '[';
+        case KC_RBRC:
+            return ']';
+        case KC_BSLS:
+            return '\\';
+        case KC_SCLN:
+            return ';';
+        case KC_QUOTE:
+            return '\'';
+        case KC_COMMA:
+            return ',';
+        case KC_DOT:
+            return '.';
+        case KC_SLASH:
+            return '/';
+        case KC_GRAVE:
+            return '`';
+        default:
+            return 0;
+    }
+}
+
+static void update_keylog(uint16_t keycode, const keyrecord_t *record) {
+    static bool initialized = false;
+    if (!initialized) {
+        memset(keylog, ' ', KEYLOG_LEN);
+        keylog[KEYLOG_LEN] = '\0';
+        initialized         = true;
+    }
+
+    // The home row mods' keycode as stored in the keymap is the whole
+    // MT(mod, kc) value, not the plain letter -- process_record_kb/
+    // post_process_record_kb always see this raw keymap value, regardless of
+    // whether the tap-hold system resolved this press as a tap or a hold.
+    // record->tap.count is 0 for a hold (only the modifier fired, no
+    // character was sent) and nonzero for a tap, so only unwrap and log the
+    // letter in the tap case.
+    if (IS_QK_MOD_TAP(keycode)) {
+        if (record->tap.count == 0) {
+            return;
+        }
+        keycode = QK_MOD_TAP_GET_TAP_KEYCODE(keycode);
+    }
+
+    char c = keycode_to_char(keycode);
+    if (c == 0) {
+        return;
+    }
+    memmove(keylog, keylog + 1, KEYLOG_LEN - 1);
+    keylog[KEYLOG_LEN - 1] = c;
+}
+
 void post_process_record_kb(uint16_t keycode, keyrecord_t *record) {
     if (record->event.pressed) {
+#ifdef RGB_MATRIX_ENABLE
         switch (keycode) {
             case RM_SATU:
             case RM_SATD:
@@ -127,10 +210,11 @@ void post_process_record_kb(uint16_t keycode, keyrecord_t *record) {
                 speed_key_pressed = true;
                 break;
         }
+#endif
+        update_keylog(keycode, record);
     }
     post_process_record_user(keycode, record);
 }
-#endif
 
 // Layer numbers match `enum layers` in keymaps/default/keymap.c
 // (_BASE, _NAV, _FN, _ADJUST) -- keep in sync if layers are added/reordered.
@@ -183,8 +267,9 @@ static void render_status(void) {
 
     led_t led_usb_state = host_keyboard_led_state();
     oled_write_P(PSTR("CAPS "), led_usb_state.caps_lock);
-    oled_write_ln_P(PSTR("CW"), is_caps_word_on());
+    oled_write_P(PSTR("CW "), is_caps_word_on());
     oled_write_ln_P(PSTR("OSM"), get_oneshot_mods() != 0);
+    oled_write_ln(keylog, false);
 }
 
 oled_rotation_t oled_init_kb(oled_rotation_t rotation) {
