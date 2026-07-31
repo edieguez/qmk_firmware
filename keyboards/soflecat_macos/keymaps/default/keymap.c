@@ -120,7 +120,7 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
  * | Tab  |   Q  |   W  |   E  |   R  |   T  |                                 |   Y  |   U  |   I  |   O  |   P  |  \   |
  * |------+------+------+------+------+------|                                |------+------+------+------+------+------|
  * |Caps/CW|A/LAlt|S/LCtl|D/LGui|F/LSft|   G  |-------.                 ,-------|   H  |J/RSft|K/RGui|L/RCtl|;/RAlt|  '   |
- * |------+------+------+------+------+------|  Mute |                | Pause |------+------+------+------+------+------|
+ * |------+------+------+------+------+------|  Mute |                | Play  |------+------+------+------+------+------|
  * |OS_Sft|   Z  |   X  |   C  |   V  |   B  |-------|                |-------|   N  |   M  |   ,  |   .  |   /  |OS_Sft|
  * `-----------------------------------------/       /                \      \-----------------------------------------'
  *                       | Globe|  No  |  No  | NAV  | Space|    |Enter | Bspc |  FN  | Adj  |  No  |
@@ -194,7 +194,7 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
  * right = Speed). QK_BOOT reflashes without the physical reset button.
  * Blank cells are transparent (same key as _BASE).
  * ,-----------------------------------------------------.                    ,-----------------------------------------------------.
- * |RGBTog|Mode- |Mode+ | Sat- | Sat+ | Bri- |                                 | Bri+ |Flag+ |Flag- |      |      | Boot |
+ * |RGBTog|Mode- |Mode+ | Sat- | Sat+ | Bri- |                                 | Bri+ |Flag- |Flag+ |      |      | Boot |
  * |------+------+------+------+------+------|                                |------+------+------+------+------+------|
  * |      |      |      |      |      |      |                                 |      |      |      |      |      |      |
  * |------+------+------+------+------+------|                                |------+------+------+------+------+------|
