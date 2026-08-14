@@ -36,6 +36,11 @@ enum custom_keycodes {
     // Globe key to" behavior. QMK core has no keycode wired to 0x29D, so
     // it's sent manually below.
     MACOS_GLOBE = SAFE_RANGE,
+    // _NAV layer's thumb Enter key: jumps to end-of-line (Cmd+Right, this
+    // keymap's standing macOS line-end convention -- see the _NAV comment
+    // block) before sending Shift+Enter, so the newline always lands at the
+    // end of the line regardless of where the cursor was.
+    NAV_EOL_ENTER,
 };
 
 bool process_record_user(uint16_t keycode, keyrecord_t *record) {
@@ -45,6 +50,12 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
                 host_consumer_send(AC_NEXT_KEYBOARD_LAYOUT_SELECT);
             } else {
                 host_consumer_send(0);
+            }
+            return false;
+        case NAV_EOL_ENTER:
+            if (record->event.pressed) {
+                tap_code16(G(KC_RIGHT));
+                tap_code16(S(KC_ENTER));
             }
             return false;
         default:
@@ -134,11 +145,11 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
  * BASE -- the Globe thumb key is MACOS_GLOBE, a custom keycode (see above),
  * not a plain keycode.
  * ,-----------------------------------------------------.                    ,-----------------------------------------------------.
- * | Esc  |   1  |   2  |   3  |   4  |   5  |                                 |   6  |   7  |   8  |   9  |   0  |   -  |
+ * | Esc  |   1  |   2  |   3  |   4  |   5  |                                |   6  |   7  |   8  |   9  |   0  |   -  |
  * |------+------+------+------+------+------|                                |------+------+------+------+------+------|
- * | Tab  |   Q  |   W  |   E  |   R  |   T  |                                 |   Y  |   U  |   I  |   O  |   P  |  \   |
+ * | Tab  |   Q  |   W  |   E  |   R  |   T  |                                |   Y  |   U  |   I  |   O  |   P  |  \   |
  * |------+------+------+------+------+------|                                |------+------+------+------+------+------|
- * |Caps/CW|A/LAlt|S/LCtl|D/LGui|F/LSft|   G  |-------.                 ,-------|   H  |J/RSft|K/RGui|L/RCtl|;/RAlt|  '   |
+ * |Caps/CW|A/LAlt|S/LCtl|D/LGui|F/LSft|   G  |-------.                ,-------|   H  |J/RSft|K/RGui|L/RCtl|;/RAlt|  '   |
  * |------+------+------+------+------+------|  Mute |                | Play  |------+------+------+------+------+------|
  * |OS_Sft|   Z  |   X  |   C  |   V  |   B  |-------|                |-------|   N  |   M  |   ,  |   .  |   /  |OS_Sft|
  * `-----------------------------------------/       /                \      \-----------------------------------------'
@@ -161,19 +172,23 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
  * start/end) -- live in the outer column, in that order, standing in for the
  * raw Home/End/PgUp/PgDn keycodes (which macOS handles inconsistently). The
  * thumb-cluster Backspace key sends Option+Backspace here (word delete
- * backwards), and the thumb-cluster Enter key sends Shift+Enter (newline
- * without submitting, for chat apps), each overriding its _BASE meaning.
- * Blank cells are transparent (same key as _BASE).
+ * backwards), and the thumb-cluster Enter key is NAV_EOL_ENTER (a custom
+ * keycode, see process_record_user): it jumps to end-of-line via Cmd+Right
+ * -- this layer's own line-end convention, see above -- then sends
+ * Shift+Enter (newline without submitting, for chat apps), guaranteeing the
+ * new line lands at the end regardless of where the cursor was. Each
+ * overrides its _BASE meaning. Blank cells are transparent (same key as
+ * _BASE).
  * ,-----------------------------------------------------.                    ,-----------------------------------------------------.
- * |      |      |      |      |      |      |                                 |      |      |      |      |      |LnStrt|
+ * |      |      |      |      |      |      |                                |      |      |      |      |      |LnStrt|
  * |------+------+------+------+------+------|                                |------+------+------+------+------+------|
- * |      |      |      |      |      |      |                                 | wLeft|      |      |wRight|     | LnEnd|
+ * |      |      |      |      |      |      |                                | wLeft|      |      |wRight|      | LnEnd|
  * |------+------+------+------+------+------|                                |------+------+------+------+------+------|
- * |      |      |      |      |      |      |-------.                 ,-------|  Left|  Down|   Up | Right|      |DocTop|
+ * |      |      |      |      |      |      |-------.                ,-------|  Left|  Down|   Up | Right|      |DocTop|
  * |------+------+------+------+------+------|       |                |       |------+------+------+------+------+------|
  * |      |      |      |      |      |      |-------|                |-------|      |      |      |      |      |DocEnd|
  * `-----------------------------------------/       /                \      \-----------------------------------------'
- *                       |      |      |      |      |      |    |ShfEnt| wBspc|      |      |      |
+ *                       |      |      |      |      |      |    |EolSftEnt| wBspc|      |      |      |
  *                       `----------------------------------'              '------''---------------------------'
  */
     [_NAV] = LAYOUT(
@@ -181,23 +196,23 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
         KC_TRNS,  KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS,                                     A(KC_LEFT), KC_TRNS, KC_TRNS,   A(KC_RIGHT), KC_TRNS,   G(KC_RIGHT),
         KC_TRNS,  KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS,                                     KC_LEFT,    KC_DOWN, KC_UP,     KC_RIGHT,    KC_TRNS,    G(KC_UP),
         KC_TRNS,  KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS,          KC_TRNS,           KC_TRNS,    KC_TRNS,    KC_TRNS, KC_TRNS,     KC_TRNS,   G(KC_DOWN),
-                                    KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, S(KC_ENTER),  A(KC_BSPC), KC_TRNS, KC_TRNS, KC_TRNS
+                                    KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, NAV_EOL_ENTER,  A(KC_BSPC), KC_TRNS, KC_TRNS, KC_TRNS
     ),
 
 /*
  * FN -- F1-F12 on the number row (F11/F12 on T/Y). Blank cells are
  * transparent (same key as _BASE).
  * ,-----------------------------------------------------.                    ,-----------------------------------------------------.
- * |      |  F1  |  F2  |  F3  |  F4  |  F5  |                                 |  F6  |  F7  |  F8  |  F9  |  F10 |      |
+ * |      |  F1  |  F2  |  F3  |  F4  |  F5  |                                |  F6  |  F7  |  F8  |  F9  |  F10 |      |
  * |------+------+------+------+------+------|                                |------+------+------+------+------+------|
- * |      |      |      |      |      |  F11 |                                 |  F12 |      |      |      |      |      |
+ * |      |      |      |      |      |  F11 |                                |  F12 |      |      |      |      |      |
  * |------+------+------+------+------+------|                                |------+------+------+------+------+------|
- * |      |      |      |      |      |      |-------.                 ,-------|      |      |      |      |      |      |
+ * |      |      |      |      |      |      |-------.                ,-------|      |      |      |      |      |      |
  * |------+------+------+------+------+------|       |                |       |------+------+------+------+------+------|
  * |      |      |      |      |      |      |-------|                |-------|      |      |      |      |      |      |
  * `-----------------------------------------/       /                \      \-----------------------------------------'
  *                       |      |      |      |      |      |    |      |      |      |      |      |
- *                       `----------------------------------'              '------''---------------------------'
+ *                       `----------------------------------'    '------''---------------------------'
  */
     [_FN] = LAYOUT(
         KC_TRNS,  KC_F1,   KC_F2,   KC_F3,   KC_F4,   KC_F5,                                       KC_F6,   KC_F7,   KC_F8,    KC_F9,   KC_F10,  KC_TRNS,
@@ -213,11 +228,11 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
  * right = Speed). QK_BOOT reflashes without the physical reset button.
  * Blank cells are transparent (same key as _BASE).
  * ,-----------------------------------------------------.                    ,-----------------------------------------------------.
- * |RGBTog|Mode- |Mode+ | Sat- | Sat+ | Bri- |                                 | Bri+ |Flag- |Flag+ |      |      | Boot |
+ * |RGBTog|Mode- |Mode+ | Sat- | Sat+ | Bri- |                                | Bri+ |Flag- |Flag+ |      |      | Boot |
  * |------+------+------+------+------+------|                                |------+------+------+------+------+------|
- * |      |      |      |      |      |      |                                 |      |      |      |      |      |      |
+ * |      |      |      |      |      |      |                                |      |      |      |      |      |      |
  * |------+------+------+------+------+------|                                |------+------+------+------+------+------|
- * |      |      |      |      |      |      |-------.                 ,-------|      |      |      |      |      |      |
+ * |      |      |      |      |      |      |-------.                ,-------|      |      |      |      |      |      |
  * |------+------+------+------+------+------|       |                |       |------+------+------+------+------+------|
  * |      |      |      |      |      |      |-------|                |-------|      |      |      |      |      |      |
  * `-----------------------------------------/       /                \      \-----------------------------------------'
