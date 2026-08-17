@@ -76,6 +76,25 @@ tap_dance_action_t tap_dance_actions[] = {
     [TD_CAPS] = ACTION_TAP_DANCE_FN_ADVANCED(NULL, caps_dance_finished, caps_dance_reset),
 };
 
+// Flow Tap (FLOW_TAP_TERM in config.h) resolves a mod-tap key to an instant
+// tap purely based on how soon it follows the previous keystroke -- before
+// Chordal Hold gets a chance to see what key comes *next*. That defeats
+// Chordal Hold's opposite-hand-forces-hold rule for the Shift home row mods:
+// typing at a normal pace and then reaching for Shift+/ ('?') or a
+// Shift+letter capital lets Flow Tap commit F/J to a tap first, producing
+// e.g. "f/" instead of "?". Disable Flow Tap on just these two keys so they
+// fall back to Chordal Hold + Permissive Hold instead; every other tap-hold
+// key (the Alt/Ctrl/GUI home row mods) keeps the default Flow Tap behavior.
+uint16_t get_flow_tap_term(uint16_t keycode, keyrecord_t *record, uint16_t prev_keycode) {
+    switch (keycode) {
+        case LSFT_T(KC_F):
+        case RSFT_T(KC_J):
+            return 0;
+        default:
+            return is_flow_tap_key(keycode) && is_flow_tap_key(prev_keycode) ? FLOW_TAP_TERM : 0;
+    }
+}
+
 // Option+Backspace sends Delete on every layer, so a dedicated Del key isn't
 // needed anywhere in the keymap. This doesn't fire on the _NAV layer's own
 // Backspace key, which sends Option+Backspace (word delete) baked in as its
