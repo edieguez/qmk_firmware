@@ -303,3 +303,31 @@ bool oled_task_kb(void) {
 }
 
 #endif
+
+// If the USB link gets stuck in USB_SUSPENDED without ever receiving a
+// genuine bus-reset/resume (e.g. after a full computer restart -- see
+// config.h), QMK's suspend loop (chibios.c protocol_pre_task()) blocks
+// forever. Recover automatically instead of requiring a physical
+// unplug/replug: if we've been continuously suspended longer than this,
+// force a warm reboot (mcu_reset() = NVIC_SystemReset(), not the
+// bootloader) to force fresh USB re-enumeration. Harmless during a real,
+// long sleep -- it just quietly re-suspends again a moment later.
+#define STUCK_SUSPEND_TIMEOUT_MS 60000
+
+static bool     suspend_timer_armed = false;
+static uint32_t suspend_started_at  = 0;
+
+void suspend_power_down_kb(void) {
+    if (!suspend_timer_armed) {
+        suspend_timer_armed = true;
+        suspend_started_at  = timer_read32();
+    } else if (timer_elapsed32(suspend_started_at) > STUCK_SUSPEND_TIMEOUT_MS) {
+        mcu_reset();
+    }
+    suspend_power_down_user();
+}
+
+void suspend_wakeup_init_kb(void) {
+    suspend_timer_armed = false;
+    suspend_wakeup_init_user();
+}
