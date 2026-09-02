@@ -20,10 +20,15 @@
 
 #ifdef OLED_ENABLE
 
+// Shared size for every status-line buffer below (rgb_status, and
+// render_status()'s shown/last_shown) so they can't drift out of sync with
+// each other and silently truncate if one gets resized without the others.
+#define OLED_STATUS_BUF_LEN 40
+
 #ifdef RGB_MATRIX_ENABLE
 #    define RGB_STATUS_DISPLAY_MS 1500
 
-static char     rgb_status[40]         = "";
+static char     rgb_status[OLED_STATUS_BUF_LEN] = "";
 static uint32_t rgb_status_shown_until = 0;
 
 // RM_SATU/RM_SATD, RM_VALU/RM_VALD, and RM_SPDU/RM_SPDD are no-ops once
@@ -229,8 +234,8 @@ static void render_status(void) {
     // status, or one RGB message <-> another) leaves stale characters
     // behind unless the display is cleared first. Only clear on an actual
     // content-shape change, not every tick, to avoid flicker.
-    static char last_shown[40] = "";
-    char        shown[40];
+    static char last_shown[OLED_STATUS_BUF_LEN] = "";
+    char        shown[OLED_STATUS_BUF_LEN];
     if (rgb_message != NULL) {
         snprintf(shown, sizeof(shown), "%s", rgb_message);
     } else {
@@ -298,3 +303,31 @@ bool oled_task_kb(void) {
 }
 
 #endif
+
+// If the USB link gets stuck in USB_SUSPENDED without ever receiving a
+// genuine bus-reset/resume (e.g. after a full computer restart -- see
+// config.h), QMK's suspend loop (chibios.c protocol_pre_task()) blocks
+// forever. Recover automatically instead of requiring a physical
+// unplug/replug: if we've been continuously suspended longer than this,
+// force a warm reboot (mcu_reset() = NVIC_SystemReset(), not the
+// bootloader) to force fresh USB re-enumeration. Harmless during a real,
+// long sleep -- it just quietly re-suspends again a moment later.
+#define STUCK_SUSPEND_TIMEOUT_MS 60000
+
+static bool     suspend_timer_armed = false;
+static uint32_t suspend_started_at  = 0;
+
+void suspend_power_down_kb(void) {
+    if (!suspend_timer_armed) {
+        suspend_timer_armed = true;
+        suspend_started_at  = timer_read32();
+    } else if (timer_elapsed32(suspend_started_at) > STUCK_SUSPEND_TIMEOUT_MS) {
+        mcu_reset();
+    }
+    suspend_power_down_user();
+}
+
+void suspend_wakeup_init_kb(void) {
+    suspend_timer_armed = false;
+    suspend_wakeup_init_user();
+}
