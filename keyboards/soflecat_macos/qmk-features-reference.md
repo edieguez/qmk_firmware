@@ -1,6 +1,6 @@
 # QMK Features & Special Keys Reference
 
-A survey of QMK's feature set, done while weighing what (if anything) to assign to `soflecat_macos`'s three permanently-unassigned thumb keys (matrix `[4,1]`, `[4,2]`, `[9,0]` — see the open item in `CLAUDE.md`'s Review findings). Kept as a standalone reference for future keymap work, not just this one decision.
+A survey of QMK's feature set, done while weighing what (if anything) to assign to `soflecat_macos`'s three thumb keys that started out permanently unassigned. Two are still dead (matrix `[4,1]`, `[4,2]`); the third of the original trio, `[9,0]`, now holds `_ADJUST` (moved there from `[9,1]`, which is the dead one instead now) — see the now-partially-resolved item in `CLAUDE.md`'s Review findings. Kept as a standalone reference for future keymap work, not just this one decision.
 
 Sourced from `docs/features/` (49 feature docs) and the keycode ranges in `quantum/keycodes.h`, cross-checked against what this keyboard currently enables (`keyboard.json`, `keymaps/default/rules.mk`, `config.h`, `keymap.c`). This is a point-in-time snapshot — re-verify against those files before relying on it, since upstream QMK's feature set evolves.
 
@@ -9,10 +9,9 @@ Sourced from `docs/features/` (49 feature docs) and the keycode ranges in `quant
 | Feature | Where configured | Note |
 |---|---|---|
 | Layer momentary-hold (`MO`) | `keymap.c` | Nav/Fn/Adjust are all held, not toggled |
-| One-shot mods (`OSM`) | `keymap.c` | `OSM(MOD_LSFT)`/`OSM(MOD_RSFT)` on `_BASE` |
-| Tap Dance | `rules.mk` (`TAP_DANCE_ENABLE`), `keymap.c` | `TD_CAPS`: tap = Caps Lock, double-tap = Caps Word toggle |
-| Key Overrides | `rules.mk` (`KEY_OVERRIDE_ENABLE`), `keymap.c` | 5 overrides: Delete, Shift+Esc→`~`, Option+Minus/I/O |
-| Caps Word | `rules.mk` (`CAPS_WORD_ENABLE`) | Reached via `TD_CAPS` double-tap |
+| Tap Dance | `rules.mk` (`TAP_DANCE_ENABLE`), `keymap.c` | `TD_CAPS`: tap = Caps Word toggle, double-tap = Caps Lock |
+| Key Overrides | `rules.mk` (`KEY_OVERRIDE_ENABLE`), `keymap.c` | 4 overrides: `RAlt+Backspace`→Delete (right-Alt only, not either Alt), `Shift+Esc`→`~`, `Option+Minus`→`=`, `Option+'`→`` ` `` |
+| Caps Word | `rules.mk` (`CAPS_WORD_ENABLE`) | Reached via `TD_CAPS` single tap |
 | WPM | `rules.mk` (`WPM_ENABLE`), `config.h` (`SPLIT_WPM_ENABLE`) | Drives bongocat animation speed + OLED readout |
 | Encoders | `keyboard.json`, `rules.mk` (`ENCODER_MAP_ENABLE`) | Volume/brightness on `_BASE`, Hue/Speed on `_ADJUST` |
 | RGB Matrix | `keyboard.json`, `soflecat_macos.c` | Full per-key addressable RGB + OLED status feedback loop |
@@ -95,7 +94,7 @@ Only relevant for keyboards with physically mechanical locking switches under th
 | Feature | Requires | Description | Notes |
 |---|---|---|---|
 | Dynamic Macros | `DYNAMIC_MACRO_ENABLE = yes` | Record/replay key sequences at runtime, lost on reboot | Minimum 2 keys for one slot (`DM_REC1` doubles as start/stop, `DM_PLY1` plays); up to 5 keys (`DM_REC1/2`, `DM_PLY1/2`, `DM_RSTP`) for two slots + dedicated stop. **128 keypresses shared** across however many slots are used (`DYNAMIC_MACRO_SIZE`, adjustable) |
-| Leader Key | `LEADER_ENABLE = yes` | Press `QK_LEAD`, then a short key sequence, to trigger a custom action | **Strong candidate** — one key becomes a gateway to unlimited custom sequences, doesn't need more physical keys to grow later |
+| Leader Key | `LEADER_ENABLE = yes` | Press `QK_LEAD`, then a short key sequence, to trigger a custom action | **Considered and declined** — see the checklist below. Was a gateway-to-unlimited-sequences pitch, but it was an unrequested suggestion the user didn't want |
 | Repeat Key | `REPEAT_KEY_ENABLE = yes` | `QK_REP` repeats whatever key was last pressed | Good for e.g. repeating Enter after a search, or an arrow press, without moving hands back |
 | Alternate Repeat Key | `REPEAT_KEY_ENABLE = yes` | `QK_AREP` — like Repeat Key, but definable keys can have an "opposite" action (e.g. after `(`, sends `)`) | More setup (a `get_alt_repeat_key_keycode_user()` table), more payoff once tuned |
 | Combos | `COMBO_ENABLE = yes` | Chord multiple *ordinary* keys together for a different output (distinct from Key Overrides, which need a held modifier) | Not tied to a specific dead key — triggers off existing keys |
@@ -145,11 +144,27 @@ All of these need physical hardware this keyboard doesn't have:
 Short-list from the discussion that led to this doc — left unchecked since no decision has been made yet. Check off (or delete) once one is picked:
 
 - [ ] Dynamic Macros (2–5 keys depending on slot/stop-key configuration)
-- [ ] Leader Key (1 key, unlimited custom sequences)
+- [x] ~~Leader Key (1 key, unlimited custom sequences)~~ — **considered and declined.** Claude suggested it unprompted (as a way to fold Undo/Redo into the freed corner keys without spending more physical keys on them) during the session that placed `[`/`]` on the pinky corners; the user pushed back ("I don't remember asking for that") and it was dropped. Not re-suggested unless asked.
 - [ ] Layer Lock (1 key, locks whatever `MO()` layer is currently held)
 - [ ] Repeat Key / Alternate Repeat Key (1–2 keys)
 - [ ] Wire up the already-enabled Mouse Keys feature
 - [ ] EEPROM Clear (1 key, resets persisted RGB/layer settings to defaults)
+
+A later session's discussion converged on pairing the two remaining open
+candidates into a trio that would fill all 3 dead keys at once: **Layer
+Lock** on `[4,1]` (pairs naturally with the momentary-only Nav/Fn/Adjust
+design — think Vim's modal editing, but for layers), **Repeat Key** on
+`[4,2]` (mirrors Vim's `.` command, works host-wide), and **Alternate Repeat
+Key** on `[9,1]` (auto-closes brackets/quotes via a
+`get_alt_repeat_key_keycode_user()` table, e.g. after `(` sends `)`).
+Presented to the user but not yet decided on — still open.
+
+Also flagged but unrelated to the dead keys: the `_NAV`/`_FN` layers' two
+encoders are currently `KC_TRNS` in both directions (do nothing beyond
+falling through to `_BASE`'s Volume/Brightness). That's free real estate
+needing no new physical keys — one idea raised was macOS Spaces switching
+(`Ctrl+Left`/`Ctrl+Right`) on the `_NAV` layer's left encoder, since nothing
+in this keymap currently switches virtual desktops. Not decided.
 
 ## Sources
 
