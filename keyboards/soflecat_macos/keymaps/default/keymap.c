@@ -66,19 +66,20 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
 // ACTION_TAP_DANCE_DOUBLE's second tap is sent via register_code16(), which
 // only ever produces a raw HID report -- it bypasses process_record(), so it
 // can't reach quantum keycodes like CW_TOGG whose behavior lives entirely in
-// a process_record hook (process_caps_word.c). Caps Word's double-tap must
-// instead call caps_word_toggle() directly, hence the "advanced" dance below
-// instead of ACTION_TAP_DANCE_DOUBLE(KC_CAPS, CW_TOGG).
+// a process_record hook (process_caps_word.c). Caps Word's tap must instead
+// call caps_word_toggle() directly, hence the "advanced" dance below instead
+// of ACTION_TAP_DANCE_DOUBLE(CW_TOGG, KC_CAPS). Single tap -> Caps Word
+// (the more frequently wanted of the two), double tap -> Caps Lock.
 static void caps_dance_finished(tap_dance_state_t *state, void *user_data) {
     if (state->count == 1) {
-        register_code(KC_CAPS);
-    } else {
         caps_word_toggle();
+    } else {
+        register_code(KC_CAPS);
     }
 }
 
 static void caps_dance_reset(tap_dance_state_t *state, void *user_data) {
-    if (state->count == 1) {
+    if (state->count != 1) {
         unregister_code(KC_CAPS);
     }
 }
@@ -106,12 +107,15 @@ uint16_t get_flow_tap_term(uint16_t keycode, keyrecord_t *record, uint16_t prev_
     }
 }
 
-// Option+Backspace sends Delete on every layer, so a dedicated Del key isn't
-// needed anywhere in the keymap. This doesn't fire on the _NAV layer's own
-// Backspace key, which sends Option+Backspace (word delete) baked in as its
-// own keycode rather than as a live Option+physical-Backspace chord, so the
-// two don't collide.
-const key_override_t delete_key_override = ko_make_basic(MOD_MASK_ALT, KC_BSPC, KC_DEL);
+// RAlt+Backspace sends Delete, on every layer. Deliberately right-Alt only
+// (MOD_BIT(KC_RALT), not MOD_MASK_ALT) so left Option+Backspace -- the
+// LALT_T(KC_A) home row mod, held constantly during normal typing -- passes
+// through untouched as macOS's native Option+Backspace (delete word
+// backward) instead of being silently intercepted. This doesn't fire on the
+// _NAV layer's own Backspace key, which sends Option+Backspace (word delete)
+// baked in as its own keycode rather than as a live Option+physical-Backspace
+// chord, so the two don't collide.
+const key_override_t delete_key_override = ko_make_basic(MOD_BIT(KC_RALT), KC_BSPC, KC_DEL);
 
 // Shift+Esc sends ~, replacing Grave Escape (QK_GESC), whose built-in
 // GUI-held case is broken on macOS: Cmd+Esc there sends Cmd+` (grave),
@@ -127,16 +131,19 @@ const key_override_t tilde_esc_override = ko_make_basic(MOD_MASK_SHIFT, KC_ESC, 
 // (no thumb/layer hold needed, and unlike Combos these only fire when
 // Option is actually held, so there's no simultaneous-press timing window
 // to misfire during normal typing). Option is already one reach away via
-// the LALT_T(KC_A)/RALT_T(KC_SCLN) home row mods.
+// the LALT_T(KC_A)/RALT_T(KC_SCLN) home row mods. [ has a dedicated key on
+// _BASE (the right bottom-corner key, see the layout below); Option+[ on
+// that same key sends ] instead, so the pair shares one physical key rather
+// than each getting its own.
 const key_override_t equal_key_override = ko_make_basic(MOD_MASK_ALT, KC_MINUS, KC_EQUAL);
-const key_override_t lbrc_key_override  = ko_make_basic(MOD_MASK_ALT, KC_I, KC_LBRC);
-const key_override_t rbrc_key_override  = ko_make_basic(MOD_MASK_ALT, KC_O, KC_RBRC);
+const key_override_t grave_key_override = ko_make_basic(MOD_MASK_ALT, KC_QUOTE, KC_GRV);
+const key_override_t rbrc_key_override  = ko_make_basic(MOD_MASK_ALT, KC_LBRC, KC_RBRC);
 
 const key_override_t *key_overrides[] = {
     &delete_key_override,
     &tilde_esc_override,
     &equal_key_override,
-    &lbrc_key_override,
+    &grave_key_override,
     &rbrc_key_override,
 };
 
@@ -149,19 +156,19 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
  * |------+------+------+------+------+------|                                |------+------+------+------+------+------|
  * | Tab  |   Q  |   W  |   E  |   R  |   T  |                                |   Y  |   U  |   I  |   O  |   P  |  \   |
  * |------+------+------+------+------+------|                                |------+------+------+------+------+------|
- * |Caps/CW|A/LAlt|S/LCtl|D/LGui|F/LSft|   G  |-------.                ,-------|   H  |J/RSft|K/RGui|L/RCtl|;/RAlt|  '   |
+ * |CW/Caps|A/LAlt|S/LCtl|D/LGui|F/LSft|   G  |-------.                ,-------|   H  |J/RSft|K/RGui|L/RCtl|;/RAlt|  '   |
  * |------+------+------+------+------+------|  Mute |                | Play  |------+------+------+------+------+------|
- * |OS_Sft|   Z  |   X  |   C  |   V  |   B  |-------|                |-------|   N  |   M  |   ,  |   .  |   /  |OS_Sft|
+ * |  No  |   Z  |   X  |   C  |   V  |   B  |-------|                |-------|   N  |   M  |   ,  |   .  |   /  |   [  |
  * `-----------------------------------------/       /                \      \-----------------------------------------'
- *                       | Globe|  No  |  No  | NAV  | Space|    |Enter | Bspc |  FN  | Adj  |  No  |
+ *                       | Globe|  No  |  No  | NAV  | Space|    |Enter | Bspc |  FN  |  No  |  Adj |
  *                       `----------------------------------'              '------''---------------------------'
  */
     [_BASE] = LAYOUT(
         KC_ESC,      KC_1,          KC_2,          KC_3,          KC_4,          KC_5,                                          KC_6,          KC_7,          KC_8,          KC_9,          KC_0,            KC_MINUS,
         KC_TAB,      KC_Q,          KC_W,          KC_E,          KC_R,          KC_T,                                          KC_Y,          KC_U,          KC_I,          KC_O,          KC_P,            KC_BSLS,
         TD(TD_CAPS), LALT_T(KC_A),  LCTL_T(KC_S),  LGUI_T(KC_D),  LSFT_T(KC_F),  KC_G,                                          KC_H,          RSFT_T(KC_J),  RGUI_T(KC_K),  RCTL_T(KC_L),  RALT_T(KC_SCLN), KC_QUOTE,
-        OSM(MOD_LSFT), KC_Z,      KC_X,          KC_C,          KC_V,          KC_B,    KC_MUTE,             KC_MPLY,        KC_N,          KC_M,          KC_COMMA,      KC_DOT,        KC_SLASH,        OSM(MOD_RSFT),
-                                                    MACOS_GLOBE,   KC_NO,         KC_NO,    MO(_NAV), KC_SPACE, KC_ENTER, KC_BSPC, MO(_FN), MO(_ADJUST),   KC_NO
+        KC_NO,       KC_Z,          KC_X,          KC_C,          KC_V,          KC_B,    KC_MUTE,             KC_MPLY,        KC_N,          KC_M,          KC_COMMA,      KC_DOT,        KC_SLASH,        KC_LBRC,
+                                                    MACOS_GLOBE,   KC_NO,         KC_NO,    MO(_NAV), KC_SPACE, KC_ENTER, KC_BSPC, MO(_FN), KC_NO,   MO(_ADJUST)
     ),
 
 /*
