@@ -361,20 +361,15 @@ void render_bongocat(void) {
     // variable animation duration. Don't want this value to get near zero as it'll bug out.
     curr_anim_duration = MAX(ANIM_FRAME_DURATION_MIN, ANIM_FRAME_DURATION_MAX - ANIM_FRAME_RATIO * get_current_wpm());
 
-    // Use QMK's own activity tracker (any key, including modifiers that don't
-    // move WPM) rather than WPM alone -- otherwise a modifier tap wakes the
-    // OLED driver's own auto-wake-on-activity, but this code would still
-    // think it's asleep and immediately call oled_off() again, causing a
-    // flicker instead of staying on.
-    if (last_matrix_activity_elapsed() < OLED_TIMEOUT) {
-        oled_on();
-
+    // On/off state itself is mirrored from the master via SPLIT_OLED_ENABLE
+    // (see config.h), so both halves blank/wake in lockstep instead of each
+    // side computing its own timeout independently -- this just skips
+    // pointless redraws while the mirrored state says the screen is off.
+    if (is_oled_on()) {
         uint32_t frame_duration = get_current_wpm() > ANIM_WPM_LOWER ? curr_anim_duration : IDLE_FRAME_DURATION;
         if (timer_elapsed32(bongo_timer) > frame_duration) {
             bongo_timer = timer_read32();
             animation_phase();
         }
-    } else {
-        oled_off();
     }
 }
