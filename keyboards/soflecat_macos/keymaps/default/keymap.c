@@ -36,6 +36,11 @@ enum custom_keycodes {
     // Globe key to" behavior. QMK core has no keycode wired to 0x29D, so
     // it's sent manually below.
     MACOS_GLOBE = SAFE_RANGE,
+    // _NAV layer's thumb Enter key: jumps to end-of-line (Cmd+Right, this
+    // keymap's standing macOS line-end convention -- see the _NAV comment
+    // block) before sending Shift+Enter, so the newline always lands at the
+    // end of the line regardless of where the cursor was.
+    NAV_EOL_ENTER,
 };
 
 bool process_record_user(uint16_t keycode, keyrecord_t *record) {
@@ -47,6 +52,12 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
                 host_consumer_send(0);
             }
             return false;
+        case NAV_EOL_ENTER:
+            if (record->event.pressed) {
+                tap_code16(G(KC_RIGHT));
+                tap_code16(S(KC_ENTER));
+            }
+            return false;
         default:
             return true;
     }
@@ -55,19 +66,20 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
 // ACTION_TAP_DANCE_DOUBLE's second tap is sent via register_code16(), which
 // only ever produces a raw HID report -- it bypasses process_record(), so it
 // can't reach quantum keycodes like CW_TOGG whose behavior lives entirely in
-// a process_record hook (process_caps_word.c). Caps Word's double-tap must
-// instead call caps_word_toggle() directly, hence the "advanced" dance below
-// instead of ACTION_TAP_DANCE_DOUBLE(KC_CAPS, CW_TOGG).
+// a process_record hook (process_caps_word.c). Caps Word's tap must instead
+// call caps_word_toggle() directly, hence the "advanced" dance below instead
+// of ACTION_TAP_DANCE_DOUBLE(CW_TOGG, KC_CAPS). Single tap -> Caps Word
+// (the more frequently wanted of the two), double tap -> Caps Lock.
 static void caps_dance_finished(tap_dance_state_t *state, void *user_data) {
     if (state->count == 1) {
-        register_code(KC_CAPS);
-    } else {
         caps_word_toggle();
+    } else {
+        register_code(KC_CAPS);
     }
 }
 
 static void caps_dance_reset(tap_dance_state_t *state, void *user_data) {
-    if (state->count == 1) {
+    if (state->count != 1) {
         unregister_code(KC_CAPS);
     }
 }
@@ -76,12 +88,34 @@ tap_dance_action_t tap_dance_actions[] = {
     [TD_CAPS] = ACTION_TAP_DANCE_FN_ADVANCED(NULL, caps_dance_finished, caps_dance_reset),
 };
 
-// Option+Backspace sends Delete on every layer, so a dedicated Del key isn't
-// needed anywhere in the keymap. This doesn't fire on the _NAV layer's own
-// Backspace key, which sends Option+Backspace (word delete) baked in as its
-// own keycode rather than as a live Option+physical-Backspace chord, so the
-// two don't collide.
-const key_override_t delete_key_override = ko_make_basic(MOD_MASK_ALT, KC_BSPC, KC_DEL);
+// Flow Tap (FLOW_TAP_TERM in config.h) resolves a mod-tap key to an instant
+// tap purely based on how soon it follows the previous keystroke -- before
+// Chordal Hold gets a chance to see what key comes *next*. That defeats
+// Chordal Hold's opposite-hand-forces-hold rule for the Shift home row mods:
+// typing at a normal pace and then reaching for Shift+/ ('?') or a
+// Shift+letter capital lets Flow Tap commit F/J to a tap first, producing
+// e.g. "f/" instead of "?". Disable Flow Tap on just these two keys so they
+// fall back to Chordal Hold + Permissive Hold instead; every other tap-hold
+// key (the Alt/Ctrl/GUI home row mods) keeps the default Flow Tap behavior.
+uint16_t get_flow_tap_term(uint16_t keycode, keyrecord_t *record, uint16_t prev_keycode) {
+    switch (keycode) {
+        case LSFT_T(KC_F):
+        case RSFT_T(KC_J):
+            return 0;
+        default:
+            return is_flow_tap_key(keycode) && is_flow_tap_key(prev_keycode) ? FLOW_TAP_TERM : 0;
+    }
+}
+
+// RAlt+Backspace sends Delete, on every layer. Deliberately right-Alt only
+// (MOD_BIT(KC_RALT), not MOD_MASK_ALT) so left Option+Backspace -- the
+// LALT_T(KC_A) home row mod, held constantly during normal typing -- passes
+// through untouched as macOS's native Option+Backspace (delete word
+// backward) instead of being silently intercepted. This doesn't fire on the
+// _NAV layer's own Backspace key, which sends Option+Backspace (word delete)
+// baked in as its own keycode rather than as a live Option+physical-Backspace
+// chord, so the two don't collide.
+const key_override_t delete_key_override = ko_make_basic(MOD_BIT(KC_RALT), KC_BSPC, KC_DEL);
 
 // Shift+Esc sends ~, replacing Grave Escape (QK_GESC), whose built-in
 // GUI-held case is broken on macOS: Cmd+Esc there sends Cmd+` (grave),
@@ -97,16 +131,19 @@ const key_override_t tilde_esc_override = ko_make_basic(MOD_MASK_SHIFT, KC_ESC, 
 // (no thumb/layer hold needed, and unlike Combos these only fire when
 // Option is actually held, so there's no simultaneous-press timing window
 // to misfire during normal typing). Option is already one reach away via
-// the LALT_T(KC_A)/RALT_T(KC_SCLN) home row mods.
+// the LALT_T(KC_A)/RALT_T(KC_SCLN) home row mods. [ has a dedicated key on
+// _BASE (the right bottom-corner key, see the layout below); Option+[ on
+// that same key sends ] instead, so the pair shares one physical key rather
+// than each getting its own.
 const key_override_t equal_key_override = ko_make_basic(MOD_MASK_ALT, KC_MINUS, KC_EQUAL);
-const key_override_t lbrc_key_override  = ko_make_basic(MOD_MASK_ALT, KC_I, KC_LBRC);
-const key_override_t rbrc_key_override  = ko_make_basic(MOD_MASK_ALT, KC_O, KC_RBRC);
+const key_override_t grave_key_override = ko_make_basic(MOD_MASK_ALT, KC_QUOTE, KC_GRV);
+const key_override_t rbrc_key_override  = ko_make_basic(MOD_MASK_ALT, KC_LBRC, KC_RBRC);
 
 const key_override_t *key_overrides[] = {
     &delete_key_override,
     &tilde_esc_override,
     &equal_key_override,
-    &lbrc_key_override,
+    &grave_key_override,
     &rbrc_key_override,
 };
 
@@ -115,23 +152,23 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
  * BASE -- the Globe thumb key is MACOS_GLOBE, a custom keycode (see above),
  * not a plain keycode.
  * ,-----------------------------------------------------.                    ,-----------------------------------------------------.
- * | Esc  |   1  |   2  |   3  |   4  |   5  |                                 |   6  |   7  |   8  |   9  |   0  |   -  |
+ * | Esc  |   1  |   2  |   3  |   4  |   5  |                                |   6  |   7  |   8  |   9  |   0  |   -  |
  * |------+------+------+------+------+------|                                |------+------+------+------+------+------|
- * | Tab  |   Q  |   W  |   E  |   R  |   T  |                                 |   Y  |   U  |   I  |   O  |   P  |  \   |
+ * | Tab  |   Q  |   W  |   E  |   R  |   T  |                                |   Y  |   U  |   I  |   O  |   P  |  \   |
  * |------+------+------+------+------+------|                                |------+------+------+------+------+------|
- * |Caps/CW|A/LAlt|S/LCtl|D/LGui|F/LSft|   G  |-------.                 ,-------|   H  |J/RSft|K/RGui|L/RCtl|;/RAlt|  '   |
- * |------+------+------+------+------+------|  Mute |                | Pause |------+------+------+------+------+------|
- * |OS_Sft|   Z  |   X  |   C  |   V  |   B  |-------|                |-------|   N  |   M  |   ,  |   .  |   /  |OS_Sft|
+ * |CW/Caps|A/LAlt|S/LCtl|D/LGui|F/LSft|   G  |-------.                ,-------|   H  |J/RSft|K/RGui|L/RCtl|;/RAlt|  '   |
+ * |------+------+------+------+------+------|  Mute |                | Play  |------+------+------+------+------+------|
+ * |  No  |   Z  |   X  |   C  |   V  |   B  |-------|                |-------|   N  |   M  |   ,  |   .  |   /  |   [  |
  * `-----------------------------------------/       /                \      \-----------------------------------------'
- *                       | Globe|  No  |  No  | NAV  | Space|    |Enter | Bspc |  FN  | Adj  |  No  |
+ *                       | Globe|  No  |  No  | NAV  | Space|    |Enter | Bspc |  FN  |  No  |  Adj |
  *                       `----------------------------------'              '------''---------------------------'
  */
     [_BASE] = LAYOUT(
         KC_ESC,      KC_1,          KC_2,          KC_3,          KC_4,          KC_5,                                          KC_6,          KC_7,          KC_8,          KC_9,          KC_0,            KC_MINUS,
         KC_TAB,      KC_Q,          KC_W,          KC_E,          KC_R,          KC_T,                                          KC_Y,          KC_U,          KC_I,          KC_O,          KC_P,            KC_BSLS,
         TD(TD_CAPS), LALT_T(KC_A),  LCTL_T(KC_S),  LGUI_T(KC_D),  LSFT_T(KC_F),  KC_G,                                          KC_H,          RSFT_T(KC_J),  RGUI_T(KC_K),  RCTL_T(KC_L),  RALT_T(KC_SCLN), KC_QUOTE,
-        OSM(MOD_LSFT), KC_Z,      KC_X,          KC_C,          KC_V,          KC_B,    KC_MUTE,             KC_MPLY,        KC_N,          KC_M,          KC_COMMA,      KC_DOT,        KC_SLASH,        OSM(MOD_RSFT),
-                                                    MACOS_GLOBE,   KC_NO,         KC_NO,    MO(_NAV), KC_SPACE, KC_ENTER, KC_BSPC, MO(_FN), MO(_ADJUST),   KC_NO
+        KC_NO,       KC_Z,          KC_X,          KC_C,          KC_V,          KC_B,    KC_MUTE,             KC_MPLY,        KC_N,          KC_M,          KC_COMMA,      KC_DOT,        KC_SLASH,        KC_LBRC,
+                                                    MACOS_GLOBE,   KC_NO,         KC_NO,    MO(_NAV), KC_SPACE, KC_ENTER, KC_BSPC, MO(_FN), KC_NO,   MO(_ADJUST)
     ),
 
 /*
@@ -142,19 +179,23 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
  * start/end) -- live in the outer column, in that order, standing in for the
  * raw Home/End/PgUp/PgDn keycodes (which macOS handles inconsistently). The
  * thumb-cluster Backspace key sends Option+Backspace here (word delete
- * backwards), and the thumb-cluster Enter key sends Shift+Enter (newline
- * without submitting, for chat apps), each overriding its _BASE meaning.
- * Blank cells are transparent (same key as _BASE).
+ * backwards), and the thumb-cluster Enter key is NAV_EOL_ENTER (a custom
+ * keycode, see process_record_user): it jumps to end-of-line via Cmd+Right
+ * -- this layer's own line-end convention, see above -- then sends
+ * Shift+Enter (newline without submitting, for chat apps), guaranteeing the
+ * new line lands at the end regardless of where the cursor was. Each
+ * overrides its _BASE meaning. Blank cells are transparent (same key as
+ * _BASE).
  * ,-----------------------------------------------------.                    ,-----------------------------------------------------.
- * |      |      |      |      |      |      |                                 |      |      |      |      |      |LnStrt|
+ * |      |      |      |      |      |      |                                |      |      |      |      |      |LnStrt|
  * |------+------+------+------+------+------|                                |------+------+------+------+------+------|
- * |      |      |      |      |      |      |                                 | wLeft|      |      |wRight|     | LnEnd|
+ * |      |      |      |      |      |      |                                | wLeft|      |      |wRight|      | LnEnd|
  * |------+------+------+------+------+------|                                |------+------+------+------+------+------|
- * |      |      |      |      |      |      |-------.                 ,-------|  Left|  Down|   Up | Right|      |DocTop|
+ * |      |      |      |      |      |      |-------.                ,-------|  Left|  Down|   Up | Right|      |DocTop|
  * |------+------+------+------+------+------|       |                |       |------+------+------+------+------+------|
  * |      |      |      |      |      |      |-------|                |-------|      |      |      |      |      |DocEnd|
  * `-----------------------------------------/       /                \      \-----------------------------------------'
- *                       |      |      |      |      |      |    |ShfEnt| wBspc|      |      |      |
+ *                       |      |      |      |      |      |    |EolSftEnt| wBspc|      |      |      |
  *                       `----------------------------------'              '------''---------------------------'
  */
     [_NAV] = LAYOUT(
@@ -162,23 +203,23 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
         KC_TRNS,  KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS,                                     A(KC_LEFT), KC_TRNS, KC_TRNS,   A(KC_RIGHT), KC_TRNS,   G(KC_RIGHT),
         KC_TRNS,  KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS,                                     KC_LEFT,    KC_DOWN, KC_UP,     KC_RIGHT,    KC_TRNS,    G(KC_UP),
         KC_TRNS,  KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS,          KC_TRNS,           KC_TRNS,    KC_TRNS,    KC_TRNS, KC_TRNS,     KC_TRNS,   G(KC_DOWN),
-                                    KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, S(KC_ENTER),  A(KC_BSPC), KC_TRNS, KC_TRNS, KC_TRNS
+                                    KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, NAV_EOL_ENTER,  A(KC_BSPC), KC_TRNS, KC_TRNS, KC_TRNS
     ),
 
 /*
  * FN -- F1-F12 on the number row (F11/F12 on T/Y). Blank cells are
  * transparent (same key as _BASE).
  * ,-----------------------------------------------------.                    ,-----------------------------------------------------.
- * |      |  F1  |  F2  |  F3  |  F4  |  F5  |                                 |  F6  |  F7  |  F8  |  F9  |  F10 |      |
+ * |      |  F1  |  F2  |  F3  |  F4  |  F5  |                                |  F6  |  F7  |  F8  |  F9  |  F10 |      |
  * |------+------+------+------+------+------|                                |------+------+------+------+------+------|
- * |      |      |      |      |      |  F11 |                                 |  F12 |      |      |      |      |      |
+ * |      |      |      |      |      |  F11 |                                |  F12 |      |      |      |      |      |
  * |------+------+------+------+------+------|                                |------+------+------+------+------+------|
- * |      |      |      |      |      |      |-------.                 ,-------|      |      |      |      |      |      |
+ * |      |      |      |      |      |      |-------.                ,-------|      |      |      |      |      |      |
  * |------+------+------+------+------+------|       |                |       |------+------+------+------+------+------|
  * |      |      |      |      |      |      |-------|                |-------|      |      |      |      |      |      |
  * `-----------------------------------------/       /                \      \-----------------------------------------'
  *                       |      |      |      |      |      |    |      |      |      |      |      |
- *                       `----------------------------------'              '------''---------------------------'
+ *                       `----------------------------------'    '------''---------------------------'
  */
     [_FN] = LAYOUT(
         KC_TRNS,  KC_F1,   KC_F2,   KC_F3,   KC_F4,   KC_F5,                                       KC_F6,   KC_F7,   KC_F8,    KC_F9,   KC_F10,  KC_TRNS,
@@ -194,11 +235,11 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
  * right = Speed). QK_BOOT reflashes without the physical reset button.
  * Blank cells are transparent (same key as _BASE).
  * ,-----------------------------------------------------.                    ,-----------------------------------------------------.
- * |RGBTog|Mode- |Mode+ | Sat- | Sat+ | Bri- |                                 | Bri+ |Flag+ |Flag- |      |      | Boot |
+ * |RGBTog|Mode- |Mode+ | Sat- | Sat+ | Bri- |                                | Bri+ |Flag- |Flag+ |      |      | Boot |
  * |------+------+------+------+------+------|                                |------+------+------+------+------+------|
- * |      |      |      |      |      |      |                                 |      |      |      |      |      |      |
+ * |      |      |      |      |      |      |                                |      |      |      |      |      |      |
  * |------+------+------+------+------+------|                                |------+------+------+------+------+------|
- * |      |      |      |      |      |      |-------.                 ,-------|      |      |      |      |      |      |
+ * |      |      |      |      |      |      |-------.                ,-------|      |      |      |      |      |      |
  * |------+------+------+------+------+------|       |                |       |------+------+------+------+------+------|
  * |      |      |      |      |      |      |-------|                |-------|      |      |      |      |      |      |
  * `-----------------------------------------/       /                \      \-----------------------------------------'
