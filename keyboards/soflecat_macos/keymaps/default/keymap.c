@@ -107,16 +107,6 @@ uint16_t get_flow_tap_term(uint16_t keycode, keyrecord_t *record, uint16_t prev_
     }
 }
 
-// RAlt+Backspace sends Delete, on every layer. Deliberately right-Alt only
-// (MOD_BIT(KC_RALT), not MOD_MASK_ALT) so left Option+Backspace -- the
-// LALT_T(KC_A) home row mod, held constantly during normal typing -- passes
-// through untouched as macOS's native Option+Backspace (delete word
-// backward) instead of being silently intercepted. This doesn't fire on the
-// _NAV layer's own Backspace key, which sends Option+Backspace (word delete)
-// baked in as its own keycode rather than as a live Option+physical-Backspace
-// chord, so the two don't collide.
-const key_override_t delete_key_override = ko_make_basic(MOD_BIT(KC_RALT), KC_BSPC, KC_DEL);
-
 // Shift+Esc sends ~, replacing Grave Escape (QK_GESC), whose built-in
 // GUI-held case is broken on macOS: Cmd+Esc there sends Cmd+` (grave),
 // which macOS intercepts as "move focus to next window" instead of
@@ -140,7 +130,6 @@ const key_override_t grave_key_override = ko_make_basic(MOD_MASK_ALT, KC_QUOTE, 
 const key_override_t rbrc_key_override  = ko_make_basic(MOD_MASK_ALT, KC_LBRC, KC_RBRC);
 
 const key_override_t *key_overrides[] = {
-    &delete_key_override,
     &tilde_esc_override,
     &equal_key_override,
     &grave_key_override,
@@ -150,7 +139,21 @@ const key_override_t *key_overrides[] = {
 const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
 /*
  * BASE -- the Globe thumb key is MACOS_GLOBE, a custom keycode (see above),
- * not a plain keycode.
+ * not a plain keycode. The two left-thumb keys next to Globe are One Shot
+ * Mods (OSM) for Cmd/Shift -- not home row mods, and not a plain hold either
+ * -- for mouse-chorded actions like Cmd-click multiselect or Shift-click
+ * range-select: a single tap latches the modifier down and keeps it there
+ * (no need to keep the thumb on the key through a whole multi-click
+ * selection) until the next *keyboard* keypress clears it. That's also why
+ * One Shot beats a plain hold or the LGUI_T(KC_D)/LSFT_T(KC_F) home row mods
+ * here -- QMK never sees mouse clicks as key events at all, so they neither
+ * resolve a mod-tap's hold/tap decision in time nor clear a one-shot mod
+ * early; the modifier just stays live across as many clicks as needed. The
+ * outermost right thumb key (matrix [9,1]) is QK_REP (Repeat Key,
+ * REPEAT_KEY_ENABLE in rules.mk): repeats whatever key was last pressed
+ * (mods included), e.g. tap Z then this key for a rolled "zz," or repeat
+ * Cmd+Z to keep undoing without re-holding Cmd. It becomes Delete instead
+ * when _NAV is held; see the _NAV block below.
  * ,-----------------------------------------------------.                    ,-----------------------------------------------------.
  * | Esc  |   1  |   2  |   3  |   4  |   5  |                                |   6  |   7  |   8  |   9  |   0  |   -  |
  * |------+------+------+------+------+------|                                |------+------+------+------+------+------|
@@ -158,17 +161,17 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
  * |------+------+------+------+------+------|                                |------+------+------+------+------+------|
  * |CW/Caps|A/LAlt|S/LCtl|D/LGui|F/LSft|   G  |-------.                ,-------|   H  |J/RSft|K/RGui|L/RCtl|;/RAlt|  '   |
  * |------+------+------+------+------+------|  Mute |                | Play  |------+------+------+------+------+------|
- * |  No  |   Z  |   X  |   C  |   V  |   B  |-------|                |-------|   N  |   M  |   ,  |   .  |   /  |   [  |
+ * |   [  |   Z  |   X  |   C  |   V  |   B  |-------|                |-------|   N  |   M  |   ,  |   .  |   /  |   ]  |
  * `-----------------------------------------/       /                \      \-----------------------------------------'
- *                       | Globe|  No  |  No  | NAV  | Space|    |Enter | Bspc |  FN  |  No  |  Adj |
+ *                       | Globe|OS_Cmd|OS_Sft| NAV  | Space|    |Enter | Bspc |  FN  | Rept |  Adj |
  *                       `----------------------------------'              '------''---------------------------'
  */
     [_BASE] = LAYOUT(
         KC_ESC,      KC_1,          KC_2,          KC_3,          KC_4,          KC_5,                                          KC_6,          KC_7,          KC_8,          KC_9,          KC_0,            KC_MINUS,
         KC_TAB,      KC_Q,          KC_W,          KC_E,          KC_R,          KC_T,                                          KC_Y,          KC_U,          KC_I,          KC_O,          KC_P,            KC_BSLS,
         TD(TD_CAPS), LALT_T(KC_A),  LCTL_T(KC_S),  LGUI_T(KC_D),  LSFT_T(KC_F),  KC_G,                                          KC_H,          RSFT_T(KC_J),  RGUI_T(KC_K),  RCTL_T(KC_L),  RALT_T(KC_SCLN), KC_QUOTE,
-        KC_NO,       KC_Z,          KC_X,          KC_C,          KC_V,          KC_B,    KC_MUTE,             KC_MPLY,        KC_N,          KC_M,          KC_COMMA,      KC_DOT,        KC_SLASH,        KC_LBRC,
-                                                    MACOS_GLOBE,   KC_NO,         KC_NO,    MO(_NAV), KC_SPACE, KC_ENTER, KC_BSPC, MO(_FN), KC_NO,   MO(_ADJUST)
+        KC_LBRC,       KC_Z,          KC_X,          KC_C,          KC_V,          KC_B,    KC_MUTE,             KC_MPLY,        KC_N,          KC_M,          KC_COMMA,      KC_DOT,        KC_SLASH,        KC_RBRC,
+                                                    MACOS_GLOBE,   OSM(MOD_LGUI), OSM(MOD_LSFT), MO(_NAV), KC_SPACE, KC_ENTER, KC_BSPC, MO(_FN), QK_REP,  MO(_ADJUST)
     ),
 
 /*
@@ -183,7 +186,10 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
  * keycode, see process_record_user): it jumps to end-of-line via Cmd+Right
  * -- this layer's own line-end convention, see above -- then sends
  * Shift+Enter (newline without submitting, for chat apps), guaranteeing the
- * new line lands at the end regardless of where the cursor was. Each
+ * new line lands at the end regardless of where the cursor was. The right
+ * thumb key that's QK_REP (Repeat Key) on _BASE sends Delete here instead --
+ * reachable with the opposite thumb from the one holding this layer, and
+ * deliberately off _BASE so it can't be mis-hit during normal typing. Each
  * overrides its _BASE meaning. Blank cells are transparent (same key as
  * _BASE).
  * ,-----------------------------------------------------.                    ,-----------------------------------------------------.
@@ -195,7 +201,7 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
  * |------+------+------+------+------+------|       |                |       |------+------+------+------+------+------|
  * |      |      |      |      |      |      |-------|                |-------|      |      |      |      |      |DocEnd|
  * `-----------------------------------------/       /                \      \-----------------------------------------'
- *                       |      |      |      |      |      |    |EolSftEnt| wBspc|      |      |      |
+ *                       |      |      |      |      |      |    |EolSftEnt| wBspc|      |  Del |      |
  *                       `----------------------------------'              '------''---------------------------'
  */
     [_NAV] = LAYOUT(
@@ -203,7 +209,7 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
         KC_TRNS,  KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS,                                     A(KC_LEFT), KC_TRNS, KC_TRNS,   A(KC_RIGHT), KC_TRNS,   G(KC_RIGHT),
         KC_TRNS,  KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS,                                     KC_LEFT,    KC_DOWN, KC_UP,     KC_RIGHT,    KC_TRNS,    G(KC_UP),
         KC_TRNS,  KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS,          KC_TRNS,           KC_TRNS,    KC_TRNS,    KC_TRNS, KC_TRNS,     KC_TRNS,   G(KC_DOWN),
-                                    KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, NAV_EOL_ENTER,  A(KC_BSPC), KC_TRNS, KC_TRNS, KC_TRNS
+                                    KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, NAV_EOL_ENTER,  A(KC_BSPC), KC_TRNS, KC_DEL,  KC_TRNS
     ),
 
 /*
@@ -235,7 +241,7 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
  * right = Speed). QK_BOOT reflashes without the physical reset button.
  * Blank cells are transparent (same key as _BASE).
  * ,-----------------------------------------------------.                    ,-----------------------------------------------------.
- * |RGBTog|Mode- |Mode+ | Sat- | Sat+ | Bri- |                                | Bri+ |Flag- |Flag+ |      |      | Boot |
+ * |RGBTog|Mode- |Mode+ | Sat- | Sat+ | Bri- |                                | Bri+ |Flag- |Flag+ |      |      |      |
  * |------+------+------+------+------+------|                                |------+------+------+------+------+------|
  * |      |      |      |      |      |      |                                |      |      |      |      |      |      |
  * |------+------+------+------+------+------|                                |------+------+------+------+------+------|
@@ -247,7 +253,7 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
  *                       `----------------------------------'              '------''---------------------------'
  */
     [_ADJUST] = LAYOUT(
-        RM_TOGG,  RM_PREV, RM_NEXT,RM_SATD, RM_SATU, RM_VALD,                                     RM_VALU, RM_FLGP, RM_FLGN,  KC_TRNS, KC_TRNS, QK_BOOT,
+        RM_TOGG,  RM_PREV, RM_NEXT,RM_SATD, RM_SATU, RM_VALD,                                     RM_VALU, RM_FLGP, RM_FLGN,  KC_TRNS, KC_TRNS, KC_TRNS,
         KC_TRNS,  KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS,                                     KC_TRNS, KC_TRNS, KC_TRNS,  KC_TRNS, KC_TRNS, KC_TRNS,
         KC_TRNS,  KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS,                                     KC_TRNS, KC_TRNS, KC_TRNS,  KC_TRNS, KC_TRNS, KC_TRNS,
         KC_TRNS,  KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS,          KC_TRNS,           KC_TRNS, KC_TRNS, KC_TRNS,  KC_TRNS, KC_TRNS, KC_TRNS,
