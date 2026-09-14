@@ -139,9 +139,9 @@ All of these need physical hardware this keyboard doesn't have:
 | Community Modules | — (module system) | QMK's plugin system for community-contributed features beyond core; an extensibility note more than a specific keycode |
 | OS Detection | `OS_DETECTION_ENABLE = yes` | Detect host OS at runtime and branch firmware behavior; already flagged separately in `CLAUDE.md`'s sibling-keyboard survey as unported here |
 
-## Candidates for the 3 dead keys
+## Candidates for the 3 dead keys — superseded, see below
 
-Short-list from the discussion that led to this doc — left unchecked since no decision has been made yet. Check off (or delete) once one is picked:
+Short-list from the discussion that led to this doc. None of these were picked:
 
 - [ ] Dynamic Macros (2–5 keys depending on slot/stop-key configuration)
 - [x] ~~Leader Key (1 key, unlimited custom sequences)~~ — **considered and declined.** Claude suggested it unprompted (as a way to fold Undo/Redo into the freed corner keys without spending more physical keys on them) during the session that placed `[`/`]` on the pinky corners; the user pushed back ("I don't remember asking for that") and it was dropped. Not re-suggested unless asked.
@@ -152,12 +152,16 @@ Short-list from the discussion that led to this doc — left unchecked since no 
 
 A later session's discussion converged on pairing the two remaining open
 candidates into a trio that would fill all 3 dead keys at once: **Layer
-Lock** on `[4,1]` (pairs naturally with the momentary-only Nav/Fn/Adjust
-design — think Vim's modal editing, but for layers), **Repeat Key** on
-`[4,2]` (mirrors Vim's `.` command, works host-wide), and **Alternate Repeat
-Key** on `[9,1]` (auto-closes brackets/quotes via a
-`get_alt_repeat_key_keycode_user()` table, e.g. after `(` sends `)`).
-Presented to the user but not yet decided on — still open.
+Lock** on `[4,1]`, **Repeat Key** on `[4,2]`, and **Alternate Repeat Key** on
+`[9,1]`. Presented to the user but never adopted.
+
+**The trio above was discarded, unused, in a following session** — the user
+opted to re-survey from scratch based on real reported gaps (Cmd/Shift home
+row mods not registering for mouse-chorded multiselect, awkward Delete
+access, Esc ergonomics) rather than pick from this speculative feature list.
+The 3 dead keys are now filled with `KC_LGUI`/`KC_LSFT`/`KC_ESC`(+`KC_DEL` on
+`_NAV`) instead — see `CLAUDE.md`'s Review findings entry for the full
+writeup. This section is kept only as a record of what was considered.
 
 Also flagged but unrelated to the dead keys: the `_NAV`/`_FN` layers' two
 encoders are currently `KC_TRNS` in both directions (do nothing beyond
