@@ -143,8 +143,6 @@ static char keycode_to_char(uint16_t keycode) {
             return ' ';
         case KC_MINUS:
             return '-';
-        case KC_EQUAL:
-            return '=';
         case KC_LBRC:
             return '[';
         case KC_RBRC:
@@ -161,8 +159,6 @@ static char keycode_to_char(uint16_t keycode) {
             return '.';
         case KC_SLASH:
             return '/';
-        case KC_GRAVE:
-            return '`';
         default:
             return 0;
     }

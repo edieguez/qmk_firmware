@@ -36,11 +36,6 @@ enum custom_keycodes {
     // Globe key to" behavior. QMK core has no keycode wired to 0x29D, so
     // it's sent manually below.
     MACOS_GLOBE = SAFE_RANGE,
-    // _NAV layer's thumb Enter key: jumps to end-of-line (Cmd+Right, this
-    // keymap's standing macOS line-end convention -- see the _NAV comment
-    // block) before sending Shift+Enter, so the newline always lands at the
-    // end of the line regardless of where the cursor was.
-    NAV_EOL_ENTER,
 };
 
 bool process_record_user(uint16_t keycode, keyrecord_t *record) {
@@ -50,12 +45,6 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
                 host_consumer_send(AC_NEXT_KEYBOARD_LAYOUT_SELECT);
             } else {
                 host_consumer_send(0);
-            }
-            return false;
-        case NAV_EOL_ENTER:
-            if (record->event.pressed) {
-                tap_code16(G(KC_RIGHT));
-                tap_code16(S(KC_ENTER));
             }
             return false;
         default:
@@ -182,12 +171,9 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
  * start/end) -- live in the outer column, in that order, standing in for the
  * raw Home/End/PgUp/PgDn keycodes (which macOS handles inconsistently). The
  * thumb-cluster Backspace key sends Option+Backspace here (word delete
- * backwards), and the thumb-cluster Enter key is NAV_EOL_ENTER (a custom
- * keycode, see process_record_user): it jumps to end-of-line via Cmd+Right
- * -- this layer's own line-end convention, see above -- then sends
- * Shift+Enter (newline without submitting, for chat apps), guaranteeing the
- * new line lands at the end regardless of where the cursor was. The right
- * thumb key that's QK_REP (Repeat Key) on _BASE sends Delete here instead --
+ * backwards), and the thumb-cluster Enter key sends Shift+Enter (newline
+ * without submitting, for chat apps). The right thumb key that's QK_REP
+ * (Repeat Key) on _BASE sends Delete here instead --
  * reachable with the opposite thumb from the one holding this layer, and
  * deliberately off _BASE so it can't be mis-hit during normal typing. Each
  * overrides its _BASE meaning. Blank cells are transparent (same key as
@@ -201,7 +187,7 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
  * |------+------+------+------+------+------|       |                |       |------+------+------+------+------+------|
  * |      |      |      |      |      |      |-------|                |-------|      |      |      |      |      |DocEnd|
  * `-----------------------------------------/       /                \      \-----------------------------------------'
- *                       |      |      |      |      |      |    |EolSftEnt| wBspc|      |  Del |      |
+ *                       |      |      |      |      |      |    |Sft+Enter| wBspc|      |  Del |      |
  *                       `----------------------------------'              '------''---------------------------'
  */
     [_NAV] = LAYOUT(
@@ -209,7 +195,7 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
         KC_TRNS,  KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS,                                     A(KC_LEFT), KC_TRNS, KC_TRNS,   A(KC_RIGHT), KC_TRNS,   G(KC_RIGHT),
         KC_TRNS,  KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS,                                     KC_LEFT,    KC_DOWN, KC_UP,     KC_RIGHT,    KC_TRNS,    G(KC_UP),
         KC_TRNS,  KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS,          KC_TRNS,           KC_TRNS,    KC_TRNS,    KC_TRNS, KC_TRNS,     KC_TRNS,   G(KC_DOWN),
-                                    KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, NAV_EOL_ENTER,  A(KC_BSPC), KC_TRNS, KC_DEL,  KC_TRNS
+                                    KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, S(KC_ENTER),    A(KC_BSPC), KC_TRNS, KC_DEL,  KC_TRNS
     ),
 
 /*

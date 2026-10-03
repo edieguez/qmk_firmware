@@ -26,21 +26,18 @@
 // WPM-responsive animation stuff here
 # define IDLE_FRAMES 5
 # define IDLE_SPEED 10  // below this wpm value your animation will idle
-// #define PREP_FRAMES 1 // uncomment if >1
 # define TAP_FRAMES 2
 # define ANIM_WPM_LOWER 20  // above this wpm value typing animation to trigger
 # define ANIM_FRAME_DURATION_MAX 450 // longest animation duration in ms
 # define ANIM_FRAME_DURATION_MIN 100 // shortest animation duration in ms
 # define IDLE_FRAME_DURATION 300  // how long each frame lasts in ms
 # define ANIM_FRAME_RATIO 2.5 // how aggressively animation speeds up with wpm
-// #define SLEEP_TIMER 60000 // should sleep after this period of 0 wpm, needs fixing
 # define ANIM_SIZE 636  // number of bytes in array, minimize for adequate firmware size, max is 1024
 
 uint32_t curr_anim_duration = 0; // variable animation duration
 uint32_t bongo_timer = 0;
 uint8_t  current_idle_frame = 0;
-// uint8_t current_prep_frame = 0; // uncomment if PREP_FRAMES >1
-uint8_t current_tap_frame = 0;
+uint8_t  current_tap_frame = 0;
 
 // Code containing pixel art, contains:
 // 5 idle frames, 1 prep frame, and 2 tap frames
@@ -348,8 +345,7 @@ void render_bongocat(void) {
         }
 
         if (get_current_wpm() > IDLE_SPEED && get_current_wpm() < ANIM_WPM_LOWER) {
-            // oled_write_raw_P(prep[abs((PREP_FRAMES-1)-current_prep_frame)], ANIM_SIZE); // uncomment if IDLE_FRAMES >1
-            oled_write_raw_P(prep[0], ANIM_SIZE);  // remove if IDLE_FRAMES >1
+            oled_write_raw_P(prep[0], ANIM_SIZE);
         }
 
         if (get_current_wpm() >= ANIM_WPM_LOWER) {
