@@ -58,17 +58,36 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
 // a process_record hook (process_caps_word.c). Caps Word's tap must instead
 // call caps_word_toggle() directly, hence the "advanced" dance below instead
 // of ACTION_TAP_DANCE_DOUBLE(CW_TOGG, KC_CAPS). Single tap -> Caps Word
-// (the more frequently wanted of the two), double tap -> Caps Lock.
+// (the more frequently wanted of the two), double tap -> Caps Lock -- except
+// a single tap while Caps Lock is already on turns Caps Lock back off
+// instead, so there's a quick one-tap way out of it without needing another
+// double tap or activating Caps Word by mistake.
+//
+// caps_dance_sent_capslock remembers which branch of caps_dance_finished()
+// actually sent a KC_CAPS press, since caps_dance_reset() needs to know
+// whether to send the matching release -- state->count alone can no longer
+// tell (both a double tap and a single tap while Caps Lock is on hit the
+// count==1 vs !=1 cases differently but both send KC_CAPS).
+static bool caps_dance_sent_capslock = false;
+
 static void caps_dance_finished(tap_dance_state_t *state, void *user_data) {
     if (state->count == 1) {
-        caps_word_toggle();
+        if (host_keyboard_led_state().caps_lock) {
+            register_code(KC_CAPS);
+            caps_dance_sent_capslock = true;
+        } else {
+            caps_word_toggle();
+            caps_dance_sent_capslock = false;
+        }
     } else {
         register_code(KC_CAPS);
+        caps_dance_sent_capslock = true;
     }
 }
 
 static void caps_dance_reset(tap_dance_state_t *state, void *user_data) {
-    if (state->count != 1) {
+    if (caps_dance_sent_capslock) {
+        wait_ms(TAP_CODE_DELAY);
         unregister_code(KC_CAPS);
     }
 }
@@ -76,6 +95,34 @@ static void caps_dance_reset(tap_dance_state_t *state, void *user_data) {
 tap_dance_action_t tap_dance_actions[] = {
     [TD_CAPS] = ACTION_TAP_DANCE_FN_ADVANCED(NULL, caps_dance_finished, caps_dance_reset),
 };
+
+// The default caps_word_press_user() treats any key it doesn't recognize as
+// word-breaking and cancels Caps Word immediately on keydown -- including
+// this key's own raw TD(TD_CAPS) keycode. Tap dance resolution is
+// asynchronous (tap_dance_task() decides "single tap" ~TAPPING_TERM later,
+// not synchronously on keydown), so without this override, re-tapping to
+// turn Caps Word off actually: (1) cancels it immediately via the default
+// word-breaking check, then (2) ~200ms later, caps_dance_finished()'s own
+// caps_word_toggle() call flips it back on, since by then it reads as off.
+// Treating TD(TD_CAPS) as word-continuing here stops the hook from racing
+// with the tap dance's own, deliberate toggle.
+bool caps_word_press_user(uint16_t keycode) {
+    switch (keycode) {
+        case TD(TD_CAPS):
+            return true;
+        case KC_A ... KC_Z:
+        case KC_MINS:
+            add_weak_mods(MOD_BIT(KC_LSFT));
+            return true;
+        case KC_1 ... KC_0:
+        case KC_BSPC:
+        case KC_DEL:
+        case KC_UNDS:
+            return true;
+        default:
+            return false;
+    }
+}
 
 // Flow Tap (FLOW_TAP_TERM in config.h) resolves a mod-tap key to an instant
 // tap purely based on how soon it follows the previous keystroke -- before

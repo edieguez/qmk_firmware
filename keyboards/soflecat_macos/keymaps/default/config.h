@@ -15,6 +15,13 @@
  */
 #pragma once
 
+// Custom font adds icon glyphs (layer state, GUI/Alt/Ctrl/Shift mod status)
+// at codepoints 0x80+ on top of the stock glyph table, for render_status()'s
+// icon-based master-half OLED display -- see lib/glcdfont.c.
+#ifdef OLED_ENABLE
+#    define OLED_FONT_H "keyboards/soflecat_macos/keymaps/default/lib/glcdfont.c"
+#endif
+
 // Enabling this option changes the startup behavior to listen for an
 // active USB communication to delegate which part is master and which
 // is slave. With this option enabled and there's USB communication,
@@ -46,3 +53,10 @@
 #define PERMISSIVE_HOLD
 #define CHORDAL_HOLD
 #define FLOW_TAP_TERM 150
+
+// Defaults to 0 (quantum/action.h) -- the wait_ms(TAP_CODE_DELAY) in
+// keymap.c's caps_dance_reset() was a no-op without this, which is why the
+// double-tap-to-Caps-Lock tap dance didn't actually fix anything until now.
+// 100ms matches the value docs/config_options.md itself suggests for "issues
+// with it registering properly".
+#define TAP_CODE_DELAY 100
