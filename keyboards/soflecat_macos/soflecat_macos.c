@@ -424,9 +424,26 @@ bool oled_task_kb(void) {
 // forever. Recover automatically instead of requiring a physical
 // unplug/replug: if we've been continuously suspended longer than this,
 // force a warm reboot (mcu_reset() = NVIC_SystemReset(), not the
-// bootloader) to force fresh USB re-enumeration. Harmless during a real,
-// long sleep -- it just quietly re-suspends again a moment later.
+// bootloader) to force fresh USB re-enumeration.
+//
+// A genuine long sleep (e.g. overnight in clamshell mode) is ALSO
+// continuously suspended for way more than this timeout, so without a
+// guard this would otherwise fire every ~60s for the entire night --
+// each one a brief window where USB remote-wakeup has to be
+// renegotiated with the host before it works again. If an actual wake
+// attempt lands during one of those hundreds of windows, the host can
+// come up without remote wakeup armed, reproducing the exact "needs
+// unplug/replug" symptom this was meant to fix. stuck_suspend_recovered
+// is placed in a RAM section never zeroed on boot (same trick as
+// bootloader_magic in platforms/chibios/bootloaders/rp2040.c) so it
+// survives the mcu_reset() below and makes the recovery reset fire only
+// ONCE per stuck episode; suspend_wakeup_init_kb() clears it again on any
+// real wake so a future genuine stuck episode (e.g. another restart) can
+// still self-heal.
 #define STUCK_SUSPEND_TIMEOUT_MS 60000
+#define STUCK_SUSPEND_RECOVERED_TOKEN 0x5C0FFEE5
+
+static volatile uint32_t __attribute__((section(".ram0.stuck_suspend_recovered"))) stuck_suspend_recovered;
 
 static bool     suspend_timer_armed = false;
 static uint32_t suspend_started_at  = 0;
@@ -435,13 +452,15 @@ void suspend_power_down_kb(void) {
     if (!suspend_timer_armed) {
         suspend_timer_armed = true;
         suspend_started_at  = timer_read32();
-    } else if (timer_elapsed32(suspend_started_at) > STUCK_SUSPEND_TIMEOUT_MS) {
+    } else if (stuck_suspend_recovered != STUCK_SUSPEND_RECOVERED_TOKEN && timer_elapsed32(suspend_started_at) > STUCK_SUSPEND_TIMEOUT_MS) {
+        stuck_suspend_recovered = STUCK_SUSPEND_RECOVERED_TOKEN;
         mcu_reset();
     }
     suspend_power_down_user();
 }
 
 void suspend_wakeup_init_kb(void) {
-    suspend_timer_armed = false;
+    suspend_timer_armed     = false;
+    stuck_suspend_recovered = 0;
     suspend_wakeup_init_user();
 }
