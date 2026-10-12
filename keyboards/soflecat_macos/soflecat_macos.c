@@ -227,10 +227,10 @@ void post_process_record_kb(uint16_t keycode, keyrecord_t *record) {
 // extra padding logic.
 
 // 3 rows x 5 cols. Layer numbers match `enum layers` in
-// keymaps/default/keymap.c (_BASE, _NAV, _FN, _ADJUST) -- keep in sync if
-// layers are added/reordered. Aurora's 4 layer-icon shapes (default/lower/
-// raise/adjust) don't have a semantic equivalence to this keymap's layers,
-// they're just reused 1:1 in enum order as a visual proxy.
+// keymaps/default/keymap.c (_BASE, _LOWER, _UPPER, _ADJUST) -- keep in sync
+// if layers are added/reordered. Aurora's 4 layer-icon shapes (default/
+// lower/raise/adjust) don't have a semantic equivalence to this keymap's
+// layers, they're just reused 1:1 in enum order as a visual proxy.
 static void render_layer_icon(uint8_t layer) {
     static const char PROGMEM base_layer[] = {0x20, 0x94, 0x95, 0x96, 0x20, 0x20, 0xb4, 0xb5, 0xb6, 0x20, 0x20, 0xd4, 0xd5, 0xd6, 0x20, 0};
     static const char PROGMEM nav_layer[]  = {0x20, 0x9a, 0x9b, 0x9c, 0x20, 0x20, 0xba, 0xbb, 0xbc, 0x20, 0x20, 0xda, 0xdb, 0xdc, 0x20, 0};
