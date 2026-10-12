@@ -17,8 +17,8 @@
 
 enum layers {
     _BASE,
-    _NAV,
-    _FN,
+    _LOWER,
+    _UPPER,
     _ADJUST,
 };
 
@@ -157,39 +157,37 @@ const key_override_t tilde_esc_override = ko_make_basic(MOD_MASK_SHIFT, KC_ESC, 
 // (no thumb/layer hold needed, and unlike Combos these only fire when
 // Option is actually held, so there's no simultaneous-press timing window
 // to misfire during normal typing). Option is already one reach away via
-// the LALT_T(KC_A)/RALT_T(KC_SCLN) home row mods. [ has a dedicated key on
-// _BASE (the right bottom-corner key, see the layout below); Option+[ on
-// that same key sends ] instead, so the pair shares one physical key rather
-// than each getting its own.
+// the LALT_T(KC_A)/RALT_T(KC_SCLN) home row mods.
 const key_override_t equal_key_override = ko_make_basic(MOD_MASK_ALT, KC_MINUS, KC_EQUAL);
 const key_override_t grave_key_override = ko_make_basic(MOD_MASK_ALT, KC_QUOTE, KC_GRV);
-const key_override_t rbrc_key_override  = ko_make_basic(MOD_MASK_ALT, KC_LBRC, KC_RBRC);
 
 const key_override_t *key_overrides[] = {
     &tilde_esc_override,
     &equal_key_override,
     &grave_key_override,
-    &rbrc_key_override,
 };
 
 const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
 /*
  * BASE -- the Globe thumb key is MACOS_GLOBE, a custom keycode (see above),
- * not a plain keycode. The two left-thumb keys next to Globe are One Shot
- * Mods (OSM) for Cmd/Shift -- not home row mods, and not a plain hold either
- * -- for mouse-chorded actions like Cmd-click multiselect or Shift-click
- * range-select: a single tap latches the modifier down and keeps it there
- * (no need to keep the thumb on the key through a whole multi-click
- * selection) until the next *keyboard* keypress clears it. That's also why
- * One Shot beats a plain hold or the LGUI_T(KC_D)/LSFT_T(KC_F) home row mods
- * here -- QMK never sees mouse clicks as key events at all, so they neither
- * resolve a mod-tap's hold/tap decision in time nor clear a one-shot mod
- * early; the modifier just stays live across as many clicks as needed. The
- * outermost right thumb key (matrix [9,1]) is QK_REP (Repeat Key,
- * REPEAT_KEY_ENABLE in rules.mk): repeats whatever key was last pressed
- * (mods included), e.g. tap Z then this key for a rolled "zz," or repeat
- * Cmd+Z to keep undoing without re-holding Cmd. It becomes Delete instead
- * when _NAV is held; see the _NAV block below.
+ * not a plain keycode. _ADJUST and _UPPER sit on the left thumb cluster
+ * next to _LOWER (Globe|Adjust|Upper|Lower|Space), so either layer -- or
+ * Adjust -- is reachable one-handed with the left thumb, since the right
+ * hand is usually on the mouse. [ and ] moved off the finger-row corners
+ * onto the right thumb cluster instead, and the vacated corners became One
+ * Shot Mods (OSM) for Shift (left corner) and Cmd (right corner) -- not
+ * home row mods, and not a plain hold either, for mouse-chorded actions
+ * like Cmd-click multiselect or Shift-click range-select: a single tap
+ * latches the modifier down and keeps it there (no need to keep a finger
+ * on the key through a whole multi-click selection) until the next
+ * *keyboard* keypress clears it. That's also why One Shot beats a plain
+ * hold or the LGUI_T(KC_D)/LSFT_T(KC_F) home row mods here -- QMK never
+ * sees mouse clicks as key events at all, so they neither resolve a
+ * mod-tap's hold/tap decision in time nor clear a one-shot mod early; the
+ * modifier just stays live across as many clicks as needed. OSM Cmd
+ * landing on the right (mouse) hand's corner is a deliberate, accepted
+ * tradeoff: Cmd-click needs a brief mouse-hand detour to tap it, unlike
+ * Shift-click, which stays entirely on the left hand.
  * ,-----------------------------------------------------.                    ,-----------------------------------------------------.
  * | Esc  |   1  |   2  |   3  |   4  |   5  |                                |   6  |   7  |   8  |   9  |   0  |   -  |
  * |------+------+------+------+------+------|                                |------+------+------+------+------+------|
@@ -197,57 +195,59 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
  * |------+------+------+------+------+------|                                |------+------+------+------+------+------|
  * |CW/Caps|A/LAlt|S/LCtl|D/LGui|F/LSft|   G  |-------.                ,-------|   H  |J/RSft|K/RGui|L/RCtl|;/RAlt|  '   |
  * |------+------+------+------+------+------|  Mute |                | Play  |------+------+------+------+------+------|
- * |   [  |   Z  |   X  |   C  |   V  |   B  |-------|                |-------|   N  |   M  |   ,  |   .  |   /  |   ]  |
+ * |OS_Sft |   Z  |   X  |   C  |   V  |   B  |-------|                |-------|   N  |   M  |   ,  |   .  |   /  |OS_Cmd|
  * `-----------------------------------------/       /                \      \-----------------------------------------'
- *                       | Globe|OS_Cmd|OS_Sft| NAV  | Space|    |Enter | Bspc |  FN  | Rept |  Adj |
+ *                       | Globe| Adj  | UPPER|LOWER | Space|    |Enter | Bspc |  [   |  ]   |  =   |
  *                       `----------------------------------'              '------''---------------------------'
  */
     [_BASE] = LAYOUT(
         KC_ESC,      KC_1,          KC_2,          KC_3,          KC_4,          KC_5,                                          KC_6,          KC_7,          KC_8,          KC_9,          KC_0,            KC_MINUS,
         KC_TAB,      KC_Q,          KC_W,          KC_E,          KC_R,          KC_T,                                          KC_Y,          KC_U,          KC_I,          KC_O,          KC_P,            KC_BSLS,
         TD(TD_CAPS), LALT_T(KC_A),  LCTL_T(KC_S),  LGUI_T(KC_D),  LSFT_T(KC_F),  KC_G,                                          KC_H,          RSFT_T(KC_J),  RGUI_T(KC_K),  RCTL_T(KC_L),  RALT_T(KC_SCLN), KC_QUOTE,
-        KC_LBRC,       KC_Z,          KC_X,          KC_C,          KC_V,          KC_B,    KC_MUTE,             KC_MPLY,        KC_N,          KC_M,          KC_COMMA,      KC_DOT,        KC_SLASH,        KC_RBRC,
-                                                    MACOS_GLOBE,   OSM(MOD_LGUI), OSM(MOD_LSFT), MO(_NAV), KC_SPACE, KC_ENTER, KC_BSPC, MO(_FN), QK_REP,  MO(_ADJUST)
+        OSM(MOD_LSFT), KC_Z,          KC_X,          KC_C,          KC_V,          KC_B,    KC_MUTE,             KC_MPLY,        KC_N,          KC_M,          KC_COMMA,      KC_DOT,        KC_SLASH,        OSM(MOD_LGUI),
+                                                    MACOS_GLOBE,   MO(_ADJUST),   MO(_UPPER),    MO(_LOWER), KC_SPACE, KC_ENTER, KC_BSPC, KC_LBRC, KC_RBRC,    KC_EQUAL
     ),
 
 /*
- * NAV -- arrows plus macOS-native word/line/document navigation stacked
- * around the arrow cluster: Option+Left/Right (word jump) above, and
- * Option+Delete (word delete) next to it. macOS's own Home/End/PgUp/PgDn
- * equivalents -- Cmd+Left/Right (line start/end) and Cmd+Up/Down (document
- * start/end) -- live in the outer column, in that order, standing in for the
- * raw Home/End/PgUp/PgDn keycodes (which macOS handles inconsistently). The
- * thumb-cluster Backspace key sends Option+Backspace here (word delete
- * backwards), and the thumb-cluster Enter key sends Shift+Enter (newline
- * without submitting, for chat apps). The right thumb key that's QK_REP
- * (Repeat Key) on _BASE sends Delete here instead --
- * reachable with the opposite thumb from the one holding this layer, and
- * deliberately off _BASE so it can't be mis-hit during normal typing. Each
- * overrides its _BASE meaning. Blank cells are transparent (same key as
- * _BASE).
+ * LOWER (formerly "NAV") -- arrows plus macOS-native word/line/document
+ * navigation stacked around the arrow cluster: Option+Left/Right (word
+ * jump) above, and Option+Delete (word delete) next to it. macOS's own
+ * Home/End/PgUp/PgDn equivalents -- Cmd+Left/Right (line start/end) and
+ * Cmd+Up/Down (document start/end) -- live in the outer column, in that
+ * order, standing in for the raw Home/End/PgUp/PgDn keycodes (which macOS
+ * handles inconsistently). The thumb-cluster Backspace key sends
+ * Option+Backspace here (word delete backwards), and the thumb-cluster
+ * Enter key sends Shift+Enter (newline without submitting, for chat apps).
+ * Delete lives at the N finger position (no dedicated thumb key for it --
+ * all 10 thumb keys are spoken for). Grave/tilde (no dedicated thumb key
+ * free for it either) lands on the Esc finger position: hold LOWER, tap
+ * the top-left key for ` (Shift for ~). Equals/plus has its own dedicated
+ * _BASE thumb key now (see above), so that position is transparent here.
+ * Each overrides its _BASE meaning. Blank cells are transparent (same key
+ * as _BASE).
  * ,-----------------------------------------------------.                    ,-----------------------------------------------------.
- * |      |      |      |      |      |      |                                |      |      |      |      |      |LnStrt|
+ * |   `  |      |      |      |      |      |                                |      |      |      |      |      |LnStrt|
  * |------+------+------+------+------+------|                                |------+------+------+------+------+------|
  * |      |      |      |      |      |      |                                | wLeft|      |      |wRight|      | LnEnd|
  * |------+------+------+------+------+------|                                |------+------+------+------+------+------|
  * |      |      |      |      |      |      |-------.                ,-------|  Left|  Down|   Up | Right|      |DocTop|
  * |------+------+------+------+------+------|       |                |       |------+------+------+------+------+------|
- * |      |      |      |      |      |      |-------|                |-------|      |      |      |      |      |DocEnd|
+ * |      |      |      |      |      |      |-------|                |-------|  Del |      |      |      |      |DocEnd|
  * `-----------------------------------------/       /                \      \-----------------------------------------'
- *                       |      |      |      |      |      |    |Sft+Enter| wBspc|      |  Del |      |
+ *                       |      |      |      |LOWER |      |    |Sft+Enter| wBspc|      |      |      |
  *                       `----------------------------------'              '------''---------------------------'
  */
-    [_NAV] = LAYOUT(
-        KC_TRNS,  KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS,                                     KC_TRNS,    KC_TRNS, KC_TRNS,   KC_TRNS,     KC_TRNS,    G(KC_LEFT),
+    [_LOWER] = LAYOUT(
+        KC_GRV,   KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS,                                     KC_TRNS,    KC_TRNS, KC_TRNS,   KC_TRNS,     KC_TRNS,    G(KC_LEFT),
         KC_TRNS,  KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS,                                     A(KC_LEFT), KC_TRNS, KC_TRNS,   A(KC_RIGHT), KC_TRNS,   G(KC_RIGHT),
         KC_TRNS,  KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS,                                     KC_LEFT,    KC_DOWN, KC_UP,     KC_RIGHT,    KC_TRNS,    G(KC_UP),
-        KC_TRNS,  KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS,          KC_TRNS,           KC_TRNS,    KC_TRNS,    KC_TRNS, KC_TRNS,     KC_TRNS,   G(KC_DOWN),
-                                    KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, S(KC_ENTER),    A(KC_BSPC), KC_TRNS, KC_DEL,  KC_TRNS
+        KC_TRNS,  KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS,          KC_TRNS,           KC_DEL,     KC_TRNS,    KC_TRNS, KC_TRNS,     KC_TRNS,   G(KC_DOWN),
+                                    KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, S(KC_ENTER),    A(KC_BSPC), KC_TRNS, KC_TRNS, KC_TRNS
     ),
 
 /*
- * FN -- F1-F12 on the number row (F11/F12 on T/Y). Blank cells are
- * transparent (same key as _BASE).
+ * UPPER (formerly "FN") -- F1-F12 on the number row (F11/F12 on T/Y). Blank
+ * cells are transparent (same key as _BASE).
  * ,-----------------------------------------------------.                    ,-----------------------------------------------------.
  * |      |  F1  |  F2  |  F3  |  F4  |  F5  |                                |  F6  |  F7  |  F8  |  F9  |  F10 |      |
  * |------+------+------+------+------+------|                                |------+------+------+------+------+------|
@@ -257,10 +257,10 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
  * |------+------+------+------+------+------|       |                |       |------+------+------+------+------+------|
  * |      |      |      |      |      |      |-------|                |-------|      |      |      |      |      |      |
  * `-----------------------------------------/       /                \      \-----------------------------------------'
- *                       |      |      |      |      |      |    |      |      |      |      |      |
+ *                       |      |      | UPPER|      |      |    |      |      |      |      |      |
  *                       `----------------------------------'    '------''---------------------------'
  */
-    [_FN] = LAYOUT(
+    [_UPPER] = LAYOUT(
         KC_TRNS,  KC_F1,   KC_F2,   KC_F3,   KC_F4,   KC_F5,                                       KC_F6,   KC_F7,   KC_F8,    KC_F9,   KC_F10,  KC_TRNS,
         KC_TRNS,  KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_F11,                                       KC_F12,  KC_TRNS, KC_TRNS,  KC_TRNS, KC_TRNS, KC_TRNS,
         KC_TRNS,  KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS,                                     KC_TRNS, KC_TRNS, KC_TRNS,  KC_TRNS, KC_TRNS, KC_TRNS,
@@ -269,9 +269,9 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
     ),
 
 /*
- * ADJUST -- held via the right-outer thumb key. RGB toggle/mode/saturation/
- * brightness/flags as taps; Hue and Speed on the encoders (left = Hue,
- * right = Speed). QK_BOOT reflashes without the physical reset button.
+ * ADJUST -- held via a dedicated left-thumb key (next to Globe). RGB
+ * toggle/mode/saturation/brightness/flags as taps; Hue and Speed on the
+ * encoders (left = Hue, right = Speed).
  * Blank cells are transparent (same key as _BASE).
  * ,-----------------------------------------------------.                    ,-----------------------------------------------------.
  * |RGBTog|Mode- |Mode+ | Sat- | Sat+ | Bri- |                                | Bri+ |Flag- |Flag+ |      |      |      |
@@ -282,7 +282,7 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
  * |------+------+------+------+------+------|       |                |       |------+------+------+------+------+------|
  * |      |      |      |      |      |      |-------|                |-------|      |      |      |      |      |      |
  * `-----------------------------------------/       /                \      \-----------------------------------------'
- *                       |      |      |      |      |      |    |      |      |      |      |      |
+ *                       |      | Adj  |      |      |      |    |      |      |      |      |      |
  *                       `----------------------------------'              '------''---------------------------'
  */
     [_ADJUST] = LAYOUT(
@@ -298,8 +298,8 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
 const uint16_t PROGMEM encoder_map[][NUM_ENCODERS][NUM_DIRECTIONS] = {
     // Right encoder sends F14/F15, bound to brightness down/up on macOS.
     [_BASE]   = { ENCODER_CCW_CW(KC_VOLD, KC_VOLU), ENCODER_CCW_CW(KC_F14, KC_F15) },
-    [_NAV]    = { ENCODER_CCW_CW(KC_TRNS, KC_TRNS), ENCODER_CCW_CW(KC_TRNS, KC_TRNS) },
-    [_FN]     = { ENCODER_CCW_CW(KC_TRNS, KC_TRNS), ENCODER_CCW_CW(KC_TRNS, KC_TRNS) },
+    [_LOWER]  = { ENCODER_CCW_CW(KC_TRNS, KC_TRNS), ENCODER_CCW_CW(KC_TRNS, KC_TRNS) },
+    [_UPPER]  = { ENCODER_CCW_CW(KC_TRNS, KC_TRNS), ENCODER_CCW_CW(KC_TRNS, KC_TRNS) },
     [_ADJUST] = { ENCODER_CCW_CW(RM_HUED, RM_HUEU), ENCODER_CCW_CW(RM_SPDD, RM_SPDU) },
 };
 #endif
