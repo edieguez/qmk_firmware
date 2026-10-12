@@ -126,7 +126,7 @@ static const char *rgb_status_message(void) {
 // entirely (see the TD_CAPS comment above and quantum/process_key_override.c),
 // so neither one reaches this log -- consistent with the rest of the keymap's
 // handling of those two features.
-#define KEYLOG_LEN 21
+#define KEYLOG_LEN 20
 static char keylog[KEYLOG_LEN + 1];
 
 static char keycode_to_char(uint16_t keycode) {
@@ -217,8 +217,122 @@ void post_process_record_kb(uint16_t keycode, keyrecord_t *record) {
     post_process_record_user(keycode, record);
 }
 
-// Layer numbers match `enum layers` in keymaps/default/keymap.c
-// (_BASE, _NAV, _FN, _ADJUST) -- keep in sync if layers are added/reordered.
+// Icon glyphs (layer-state block, GUI/Alt/Ctrl/Shift mod-status pairs, bleed
+// fillers between them) come from lib/glcdfont.c, codepoints 0x80+, reused
+// verbatim from keyboards/splitkb/aurora/sofle_v2 -- see that board's
+// render_layer_state()/render_mod_status_gui_alt()/render_mod_status_ctrl_shift()
+// for the original. Each writes a fixed number of 5-character rows, matching
+// this board's master-half portrait grid (OLED_ROTATION_90, 5 cols x 16 rows)
+// exactly, so render_status() below can lay them out by row range with no
+// extra padding logic.
+
+// 3 rows x 5 cols. Layer numbers match `enum layers` in
+// keymaps/default/keymap.c (_BASE, _NAV, _FN, _ADJUST) -- keep in sync if
+// layers are added/reordered. Aurora's 4 layer-icon shapes (default/lower/
+// raise/adjust) don't have a semantic equivalence to this keymap's layers,
+// they're just reused 1:1 in enum order as a visual proxy.
+static void render_layer_icon(uint8_t layer) {
+    static const char PROGMEM base_layer[] = {0x20, 0x94, 0x95, 0x96, 0x20, 0x20, 0xb4, 0xb5, 0xb6, 0x20, 0x20, 0xd4, 0xd5, 0xd6, 0x20, 0};
+    static const char PROGMEM nav_layer[]  = {0x20, 0x9a, 0x9b, 0x9c, 0x20, 0x20, 0xba, 0xbb, 0xbc, 0x20, 0x20, 0xda, 0xdb, 0xdc, 0x20, 0};
+    static const char PROGMEM fn_layer[]   = {0x20, 0x97, 0x98, 0x99, 0x20, 0x20, 0xb7, 0xb8, 0xb9, 0x20, 0x20, 0xd7, 0xd8, 0xd9, 0x20, 0};
+    static const char PROGMEM adjust_layer[] = {0x20, 0x9d, 0x9e, 0x9f, 0x20, 0x20, 0xbd, 0xbe, 0xbf, 0x20, 0x20, 0xdd, 0xde, 0xdf, 0x20, 0};
+
+    switch (layer) {
+        case 1:
+            oled_write_P(nav_layer, false);
+            break;
+        case 2:
+            oled_write_P(fn_layer, false);
+            break;
+        case 3:
+            oled_write_P(adjust_layer, false);
+            break;
+        default:
+            oled_write_P(base_layer, false);
+    }
+}
+
+// 2 rows x 5 cols. `modifiers` should be get_mods()|get_oneshot_mods() so a
+// currently-held mod and a one-shot mod both show as "on" -- a currently-
+// held mod was previously invisible to this display entirely (only
+// get_oneshot_mods() was checked).
+static void render_mod_icons_gui_alt(uint8_t modifiers) {
+    static const char PROGMEM gui_off_1[] = {0x85, 0x86, 0};
+    static const char PROGMEM gui_off_2[] = {0xa5, 0xa6, 0};
+    static const char PROGMEM gui_on_1[]  = {0x8d, 0x8e, 0};
+    static const char PROGMEM gui_on_2[]  = {0xad, 0xae, 0};
+
+    static const char PROGMEM alt_off_1[] = {0x87, 0x88, 0};
+    static const char PROGMEM alt_off_2[] = {0xa7, 0xa8, 0};
+    static const char PROGMEM alt_on_1[]  = {0x8f, 0x90, 0};
+    static const char PROGMEM alt_on_2[]  = {0xaf, 0xb0, 0};
+
+    // Fillers between the modifier icons bleed into the icon frames, so the
+    // pair reads as one continuous shape rather than two disjoint icons.
+    static const char PROGMEM off_off_1[] = {0xc5, 0};
+    static const char PROGMEM off_off_2[] = {0xc6, 0};
+    static const char PROGMEM on_off_1[]  = {0xc7, 0};
+    static const char PROGMEM on_off_2[]  = {0xc8, 0};
+    static const char PROGMEM off_on_1[]  = {0xc9, 0};
+    static const char PROGMEM off_on_2[]  = {0xca, 0};
+    static const char PROGMEM on_on_1[]   = {0xcb, 0};
+    static const char PROGMEM on_on_2[]   = {0xcc, 0};
+
+    bool gui = modifiers & MOD_MASK_GUI;
+    bool alt = modifiers & MOD_MASK_ALT;
+
+    oled_write_P(gui ? gui_on_1 : gui_off_1, false);
+    oled_write_P(gui && alt ? on_on_1 : gui ? on_off_1 : alt ? off_on_1 : off_off_1, false);
+    oled_write_P(alt ? alt_on_1 : alt_off_1, false);
+
+    oled_write_P(gui ? gui_on_2 : gui_off_2, false);
+    oled_write_P(gui && alt ? on_on_2 : gui ? on_off_2 : alt ? off_on_2 : off_off_2, false);
+    oled_write_P(alt ? alt_on_2 : alt_off_2, false);
+}
+
+// 2 rows x 5 cols. Same bleed-filler technique as render_mod_icons_gui_alt().
+static void render_mod_icons_ctrl_shift(uint8_t modifiers) {
+    static const char PROGMEM ctrl_off_1[] = {0x89, 0x8a, 0};
+    static const char PROGMEM ctrl_off_2[] = {0xa9, 0xaa, 0};
+    static const char PROGMEM ctrl_on_1[]  = {0x91, 0x92, 0};
+    static const char PROGMEM ctrl_on_2[]  = {0xb1, 0xb2, 0};
+
+    static const char PROGMEM shift_off_1[] = {0x8b, 0x8c, 0};
+    static const char PROGMEM shift_off_2[] = {0xab, 0xac, 0};
+    static const char PROGMEM shift_on_1[]  = {0xcd, 0xce, 0};
+    static const char PROGMEM shift_on_2[]  = {0xcf, 0xd0, 0};
+
+    static const char PROGMEM off_off_1[] = {0xc5, 0};
+    static const char PROGMEM off_off_2[] = {0xc6, 0};
+    static const char PROGMEM on_off_1[]  = {0xc7, 0};
+    static const char PROGMEM on_off_2[]  = {0xc8, 0};
+    static const char PROGMEM off_on_1[]  = {0xc9, 0};
+    static const char PROGMEM off_on_2[]  = {0xca, 0};
+    static const char PROGMEM on_on_1[]   = {0xcb, 0};
+    static const char PROGMEM on_on_2[]   = {0xcc, 0};
+
+    bool ctrl  = modifiers & MOD_MASK_CTRL;
+    bool shift = modifiers & MOD_MASK_SHIFT;
+
+    oled_write_P(ctrl ? ctrl_on_1 : ctrl_off_1, false);
+    oled_write_P(ctrl && shift ? on_on_1 : ctrl ? on_off_1 : shift ? off_on_1 : off_off_1, false);
+    oled_write_P(shift ? shift_on_1 : shift_off_1, false);
+
+    oled_write_P(ctrl ? ctrl_on_2 : ctrl_off_2, false);
+    oled_write_P(ctrl && shift ? on_on_2 : ctrl ? on_off_2 : shift ? off_on_2 : off_off_2, false);
+    oled_write_P(shift ? shift_on_2 : shift_off_2, false);
+}
+
+// Portrait layout (OLED_ROTATION_270, 5 cols x 16 rows):
+//   rows  0-2   layer icon
+//   row   3     spacer
+//   rows  4-5   GUI | Alt icon pair
+//   rows  6-7   Ctrl | Shift icon pair
+//   row   8     spacer
+//   row   9     "CAPS" bar (full-row invert when caps_lock active)
+//   row   10    "WORD" bar (full-row invert when caps word active)
+//   row   11    spacer
+//   rows  12-15 rolling keylog (20 chars, auto-wraps across exactly 4 rows)
 static void render_status(void) {
     const char *rgb_message = NULL;
 #ifdef RGB_MATRIX_ENABLE
@@ -226,21 +340,19 @@ static void render_status(void) {
 #endif
 
     // oled_write*() only overwrites the character cells it draws into, so
-    // switching between differently-shaped content (RGB message <-> layer
-    // status, or one RGB message <-> another) leaves stale characters
-    // behind unless the display is cleared first. Only clear on an actual
-    // content-shape change, not every tick, to avoid flicker.
-    static char last_shown[OLED_STATUS_BUF_LEN] = "";
-    char        shown[OLED_STATUS_BUF_LEN];
-    if (rgb_message != NULL) {
-        snprintf(shown, sizeof(shown), "%s", rgb_message);
-    } else {
-        snprintf(shown, sizeof(shown), "layer%u", get_highest_layer(layer_state));
-    }
-    if (strcmp(shown, last_shown) != 0) {
+    // switching between an RGB message overlay and the normal status
+    // display leaves stale characters behind unless the display is cleared
+    // first. Every row below always writes its full fixed-width footprint,
+    // so the RGB-message-vs-normal-mode switch is the only real
+    // content-shape change left to guard against (no per-row tracking
+    // needed).
+    static bool last_was_rgb_message = false;
+    bool        is_rgb_message       = rgb_message != NULL;
+    if (is_rgb_message != last_was_rgb_message) {
         oled_clear();
-        strcpy(last_shown, shown);
+        last_was_rgb_message = is_rgb_message;
     }
+
     oled_set_cursor(0, 0);
 
     if (rgb_message != NULL) {
@@ -248,34 +360,40 @@ static void render_status(void) {
         return;
     }
 
-    oled_write_P(PSTR("LAYER\n"), false);
-    switch (get_highest_layer(layer_state)) {
-        case 0:
-            oled_write_ln_P(PSTR("Base"), false);
-            break;
-        case 1:
-            oled_write_ln_P(PSTR("Nav"), false);
-            break;
-        case 2:
-            oled_write_ln_P(PSTR("Fn"), false);
-            break;
-        case 3:
-            oled_write_ln_P(PSTR("Adjust"), false);
-            break;
-        default:
-            oled_write_ln_P(PSTR("Undef"), false);
-    }
+    uint8_t mods = get_mods() | get_oneshot_mods();
+
+    render_layer_icon(get_highest_layer(layer_state));
+
+    oled_set_cursor(0, 3);
+    oled_write_P(PSTR("     "), false);
+
+    oled_set_cursor(0, 4);
+    render_mod_icons_gui_alt(mods);
+    render_mod_icons_ctrl_shift(mods);
+
+    oled_set_cursor(0, 8);
+    oled_write_P(PSTR("     "), false);
 
     led_t led_usb_state = host_keyboard_led_state();
+    oled_set_cursor(0, 9);
     oled_write_P(PSTR("CAPS "), led_usb_state.caps_lock);
-    oled_write_P(PSTR("CW "), is_caps_word_on());
-    oled_write_ln_P(PSTR("OSM"), get_oneshot_mods() != 0);
-    oled_write_ln(keylog, false);
+
+    oled_set_cursor(0, 10);
+    oled_write_P(PSTR("WORD "), is_caps_word_on());
+
+    oled_set_cursor(0, 11);
+    oled_write_P(PSTR("     "), false);
+
+    oled_set_cursor(0, 12);
+    oled_write(keylog, false);
 }
 
 oled_rotation_t oled_init_kb(oled_rotation_t rotation) {
     if (is_keyboard_master()) {
-        return rotation;
+        // OLED_ROTATION_0 was sideways and OLED_ROTATION_90 came out
+        // upside-down for this half's physical mounting -- confirmed by
+        // flashing both. 270 is the one that reads right-side up.
+        return OLED_ROTATION_270;
     }
     return OLED_ROTATION_180;
 }
