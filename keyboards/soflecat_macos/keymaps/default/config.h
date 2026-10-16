@@ -53,6 +53,9 @@
 #define PERMISSIVE_HOLD
 #define CHORDAL_HOLD
 #define FLOW_TAP_TERM 150
+// Required for get_tapping_term() in keymap.c to actually be consulted --
+// see docs/tap_hold.md "Per Key Tapping Term".
+#define TAPPING_TERM_PER_KEY
 
 // Defaults to 0 (quantum/action.h) -- the wait_ms(TAP_CODE_DELAY) in
 // keymap.c's caps_dance_reset() was a no-op without this, which is why the
