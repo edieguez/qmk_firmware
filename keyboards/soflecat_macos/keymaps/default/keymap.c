@@ -36,6 +36,16 @@ enum custom_keycodes {
     // Globe key to" behavior. QMK core has no keycode wired to 0x29D, so
     // it's sent manually below.
     MACOS_GLOBE = SAFE_RANGE,
+    // Plain OSM(mod) has no "tap again to cancel" behavior -- a second tap
+    // while already one-shot-armed just re-arms it (add_oneshot_mods() is
+    // idempotent), since by the time of a deliberate second tap enough real
+    // time has usually passed that it reads as a fresh, independent press
+    // rather than a rapid double-tap for ONESHOT_TAP_TOGGLE to catch. These
+    // two custom keycodes replace OSM(MOD_LSFT)/OSM(MOD_LGUI) on _BASE to
+    // add that explicitly: tap once to arm, tap again (any time before the
+    // next real keypress consumes it) to cancel.
+    OS_SFT,
+    OS_CMD,
 };
 
 bool process_record_user(uint16_t keycode, keyrecord_t *record) {
@@ -45,6 +55,24 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
                 host_consumer_send(AC_NEXT_KEYBOARD_LAYOUT_SELECT);
             } else {
                 host_consumer_send(0);
+            }
+            return false;
+        case OS_SFT:
+            if (record->event.pressed) {
+                if (get_oneshot_mods() & MOD_BIT(KC_LSFT)) {
+                    del_oneshot_mods(MOD_BIT(KC_LSFT));
+                } else {
+                    add_oneshot_mods(MOD_BIT(KC_LSFT));
+                }
+            }
+            return false;
+        case OS_CMD:
+            if (record->event.pressed) {
+                if (get_oneshot_mods() & MOD_BIT(KC_LGUI)) {
+                    del_oneshot_mods(MOD_BIT(KC_LGUI));
+                } else {
+                    add_oneshot_mods(MOD_BIT(KC_LGUI));
+                }
             }
             return false;
         default:
@@ -127,19 +155,47 @@ bool caps_word_press_user(uint16_t keycode) {
 // Flow Tap (FLOW_TAP_TERM in config.h) resolves a mod-tap key to an instant
 // tap purely based on how soon it follows the previous keystroke -- before
 // Chordal Hold gets a chance to see what key comes *next*. That defeats
-// Chordal Hold's opposite-hand-forces-hold rule for the Shift home row mods:
-// typing at a normal pace and then reaching for Shift+/ ('?') or a
-// Shift+letter capital lets Flow Tap commit F/J to a tap first, producing
-// e.g. "f/" instead of "?". Disable Flow Tap on just these two keys so they
-// fall back to Chordal Hold + Permissive Hold instead; every other tap-hold
-// key (the Alt/Ctrl/GUI home row mods) keeps the default Flow Tap behavior.
+// Chordal Hold's opposite-hand-forces-hold rule for the Shift/GUI home row
+// mods: typing at a normal pace and then reaching for Shift+/ ('?'), a
+// Shift+letter capital, or Cmd+V lets Flow Tap commit F/J or D/K to a tap
+// first, producing e.g. "f/" instead of "?", or "kv" instead of Cmd+V.
+// Disable Flow Tap on just these four keys so they fall back to Chordal
+// Hold + Permissive Hold instead; every other tap-hold key (the Alt/Ctrl
+// home row mods) keeps the default Flow Tap behavior.
 uint16_t get_flow_tap_term(uint16_t keycode, keyrecord_t *record, uint16_t prev_keycode) {
     switch (keycode) {
         case LSFT_T(KC_F):
         case RSFT_T(KC_J):
+        case LGUI_T(KC_D):
+        case RGUI_T(KC_K):
             return 0;
         default:
             return is_flow_tap_key(keycode) && is_flow_tap_key(prev_keycode) ? FLOW_TAP_TERM : 0;
+    }
+}
+
+// Complementary fix to the Flow Tap exclusion above, for the same "f/"/
+// "kv" instead of "?"/Cmd+V symptom: Chordal Hold and Permissive Hold both
+// need F/J/D/K to still be physically held when the opposite-hand key
+// (e.g. "/" or "v") is pressed, to recognize a chord. At high typing speed
+// there's sometimes close to zero overlap -- the mod-tap key gets released
+// almost the instant the other key is pressed -- leaving no chord for
+// either mechanism to catch, since by definition there's nothing to
+// detect once the key's already up. Shift and GUI are disproportionately
+// prone to this because they're often paired with a farther-reach key
+// (top row or opposite corner), which naturally shortens overlap. A longer
+// tapping term just for these four keys gives more margin for that overlap
+// to still count. Requires TAPPING_TERM_PER_KEY in config.h to actually be
+// consulted.
+uint16_t get_tapping_term(uint16_t keycode, keyrecord_t *record) {
+    switch (keycode) {
+        case LSFT_T(KC_F):
+        case RSFT_T(KC_J):
+        case LGUI_T(KC_D):
+        case RGUI_T(KC_K):
+            return TAPPING_TERM + 80;
+        default:
+            return TAPPING_TERM;
     }
 }
 
@@ -187,7 +243,10 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
  * modifier just stays live across as many clicks as needed. OSM Cmd
  * landing on the right (mouse) hand's corner is a deliberate, accepted
  * tradeoff: Cmd-click needs a brief mouse-hand detour to tap it, unlike
- * Shift-click, which stays entirely on the left hand.
+ * Shift-click, which stays entirely on the left hand. These are the custom
+ * OS_SFT/OS_CMD keycodes (see enum custom_keycodes above), not plain
+ * OSM() -- tapping again while already armed cancels it instead of just
+ * re-arming it, which is what plain OSM() would do.
  * ,-----------------------------------------------------.                    ,-----------------------------------------------------.
  * | Esc  |   1  |   2  |   3  |   4  |   5  |                                |   6  |   7  |   8  |   9  |   0  |   -  |
  * |------+------+------+------+------+------|                                |------+------+------+------+------+------|
@@ -204,7 +263,7 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
         KC_ESC,      KC_1,          KC_2,          KC_3,          KC_4,          KC_5,                                          KC_6,          KC_7,          KC_8,          KC_9,          KC_0,            KC_MINUS,
         KC_TAB,      KC_Q,          KC_W,          KC_E,          KC_R,          KC_T,                                          KC_Y,          KC_U,          KC_I,          KC_O,          KC_P,            KC_BSLS,
         TD(TD_CAPS), LALT_T(KC_A),  LCTL_T(KC_S),  LGUI_T(KC_D),  LSFT_T(KC_F),  KC_G,                                          KC_H,          RSFT_T(KC_J),  RGUI_T(KC_K),  RCTL_T(KC_L),  RALT_T(KC_SCLN), KC_QUOTE,
-        OSM(MOD_LSFT), KC_Z,          KC_X,          KC_C,          KC_V,          KC_B,    KC_MUTE,             KC_MPLY,        KC_N,          KC_M,          KC_COMMA,      KC_DOT,        KC_SLASH,        OSM(MOD_LGUI),
+        OS_SFT,        KC_Z,          KC_X,          KC_C,          KC_V,          KC_B,    KC_MUTE,             KC_MPLY,        KC_N,          KC_M,          KC_COMMA,      KC_DOT,        KC_SLASH,        OS_CMD,
                                                     MACOS_GLOBE,   MO(_ADJUST),   MO(_UPPER),    MO(_LOWER), KC_SPACE, KC_ENTER, KC_BSPC, KC_LBRC, KC_RBRC,    KC_EQUAL
     ),
 
