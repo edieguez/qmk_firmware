@@ -250,28 +250,35 @@ const key_override_t *key_overrides[] = {
 
 const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
 /*
- * BASE -- the Globe thumb key is MACOS_GLOBE, a custom keycode (see above),
- * not a plain keycode. _ADJUST and _UPPER sit on the left thumb cluster
- * next to _LOWER (Globe|Adjust|Upper|Lower|Space), so either layer -- or
- * Adjust -- is reachable one-handed with the left thumb, since the right
- * hand is usually on the mouse. [ and ] moved off the finger-row corners
- * onto the right thumb cluster instead, and the vacated corners became One
- * Shot Mods (OSM) for Shift (left corner) and Cmd (right corner) -- not
- * home row mods, and not a plain hold either, for mouse-chorded actions
- * like Cmd-click multiselect or Shift-click range-select: a single tap
- * latches the modifier down and keeps it there (no need to keep a finger
- * on the key through a whole multi-click selection) until the next
- * *keyboard* keypress clears it. That's also why One Shot beats a plain
- * hold or the LGUI_T(KC_D)/LSFT_T(KC_F) home row mods here -- QMK never
- * sees mouse clicks as key events at all, so they neither resolve a
- * mod-tap's hold/tap decision in time nor clear a one-shot mod early; the
- * modifier just stays live across as many clicks as needed. OSM Cmd
- * landing on the right (mouse) hand's corner is a deliberate, accepted
- * tradeoff: Cmd-click needs a brief mouse-hand detour to tap it, unlike
- * Shift-click, which stays entirely on the left hand. These are the custom
- * OS_SFT/OS_CMD keycodes (see enum custom_keycodes above), not plain
- * OSM() -- tapping again while already armed cancels it instead of just
- * re-arming it, which is what plain OSM() would do.
+ * BASE -- _ADJUST and _UPPER sit on the left thumb cluster next to _LOWER
+ * (Adjust|Upper|OS_Sft|Lower|Space), so either layer -- or Adjust -- is
+ * reachable one-handed with the left thumb, since the right hand is
+ * usually on the mouse. The One Shot Mods (OSM) for Shift and Cmd sit on
+ * the innermost key of each thumb cluster -- not home row mods, and not a
+ * plain hold either, for mouse-chorded actions like Cmd-click multiselect
+ * or Shift-click range-select: a single tap latches the modifier down and
+ * keeps it there (no need to keep a finger on the key through a whole
+ * multi-click selection) until the next *keyboard* keypress clears it.
+ * That's also why One Shot beats a plain hold or the LGUI_T(KC_D)/
+ * LSFT_T(KC_F) home row mods here -- QMK never sees mouse clicks as key
+ * events at all, so they neither resolve a mod-tap's hold/tap decision in
+ * time nor clear a one-shot mod early; the modifier just stays live across
+ * as many clicks as needed. These are the custom OS_SFT/OS_CMD keycodes
+ * (see enum custom_keycodes above), not plain OSM() -- tapping again while
+ * already armed cancels it instead of just re-arming it, which is what
+ * plain OSM() would do.
+ *
+ * Moving OSM Cmd onto the right thumb cluster bumped [ and ] one slot
+ * right (freeing the slot next to Bspc for it) and pushed = off the thumb
+ * cluster entirely, onto the bottom-right corner it now shares with /.
+ * Symmetrically on the left, moving OSM Shift onto the thumb cluster
+ * (replacing Upper's old slot) shifted Adjust and Upper each one slot
+ * left, and pushed the Globe key off the thumb cluster onto the
+ * bottom-left corner. Globe (rare: keyboard-layout switching) and = (less
+ * frequent than the brackets) are the two keys judged cheapest to demote
+ * to a pinky-corner reach, freeing the easier thumb reach for the mods
+ * used mid-mouse-gesture. Globe is still the custom MACOS_GLOBE keycode
+ * (see above), not a plain keycode.
  * ,-----------------------------------------------------.                    ,-----------------------------------------------------.
  * | Esc  |   1  |   2  |   3  |   4  |   5  |                                |   6  |   7  |   8  |   9  |   0  |   -  |
  * |------+------+------+------+------+------|                                |------+------+------+------+------+------|
@@ -279,17 +286,17 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
  * |------+------+------+------+------+------|                                |------+------+------+------+------+------|
  * |CW/Caps|A/LAlt|S/LCtl|D/LGui|F/LSft|   G  |-------.                ,-------|   H  |J/RSft|K/RGui|L/RCtl|;/RAlt|  '   |
  * |------+------+------+------+------+------|  Mute |                | Play  |------+------+------+------+------+------|
- * |OS_Sft |   Z  |   X  |   C  |   V  |   B  |-------|                |-------|   N  |   M  |   ,  |   .  |   /  |OS_Cmd|
+ * |Globe  |   Z  |   X  |   C  |   V  |   B  |-------|                |-------|   N  |   M  |   ,  |   .  |   /  |  =   |
  * `-----------------------------------------/       /                \      \-----------------------------------------'
- *                       | Globe| Adj  | UPPER|LOWER | Space|    |Enter | Bspc |  [   |  ]   |  =   |
+ *                       | Adj  | UPPER|OS_Sft|LOWER | Space|    |Enter | Bspc |OS_Cmd|  [   |  ]   |
  *                       `----------------------------------'              '------''---------------------------'
  */
     [_BASE] = LAYOUT(
         KC_ESC,      KC_1,          KC_2,          KC_3,          KC_4,          KC_5,                                          KC_6,          KC_7,          KC_8,          KC_9,          KC_0,            KC_MINUS,
         KC_TAB,      KC_Q,          KC_W,          KC_E,          KC_R,          KC_T,                                          KC_Y,          KC_U,          KC_I,          KC_O,          KC_P,            KC_BSLS,
         TD(TD_CAPS), LALT_T(KC_A),  LCTL_T(KC_S),  LGUI_T(KC_D),  LSFT_T(KC_F),  KC_G,                                          KC_H,          RSFT_T(KC_J),  RGUI_T(KC_K),  RCTL_T(KC_L),  RALT_T(KC_SCLN), KC_QUOTE,
-        OS_SFT,        KC_Z,          KC_X,          KC_C,          KC_V,          KC_B,    KC_MUTE,             KC_MPLY,        KC_N,          KC_M,          KC_COMMA,      KC_DOT,        KC_SLASH,        OS_CMD,
-                                                    MACOS_GLOBE,   MO(_ADJUST),   MO(_UPPER),    MO(_LOWER), KC_SPACE, KC_ENTER, KC_BSPC, KC_LBRC, KC_RBRC,    KC_EQUAL
+        MACOS_GLOBE,   KC_Z,          KC_X,          KC_C,          KC_V,          KC_B,    KC_MUTE,             KC_MPLY,        KC_N,          KC_M,          KC_COMMA,      KC_DOT,        KC_SLASH,        KC_EQUAL,
+                                                    MO(_ADJUST),   MO(_UPPER),   OS_SFT,    MO(_LOWER), KC_SPACE, KC_ENTER, KC_BSPC, OS_CMD, KC_LBRC,    KC_RBRC
     ),
 
 /*
@@ -305,10 +312,10 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
  * Delete lives at the N finger position (no dedicated thumb key for it --
  * all 10 thumb keys are spoken for). Grave/tilde (no dedicated thumb key
  * free for it either) lands on the Esc finger position: hold LOWER, tap
- * the top-left key for ` (Shift for ~). Equals/plus has its own dedicated
- * _BASE thumb key now (see above), so that position is transparent here.
- * Each overrides its _BASE meaning. Blank cells are transparent (same key
- * as _BASE).
+ * the top-left key for ` (Shift for ~). The remaining thumb keys (Adjust/
+ * Upper/OS_Sft taps, and OS_Cmd/[/] on the right) just keep their _BASE
+ * meaning here, transparent. Each overrides its _BASE meaning. Blank
+ * cells are transparent (same key as _BASE).
  * ,-----------------------------------------------------.                    ,-----------------------------------------------------.
  * |   `  |      |      |      |      |      |                                |      |      |      |      |      |LnStrt|
  * |------+------+------+------+------+------|                                |------+------+------+------+------+------|
@@ -341,7 +348,7 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
  * |------+------+------+------+------+------|       |                |       |------+------+------+------+------+------|
  * |      |      |      |      |      |      |-------|                |-------|      |      |      |      |      |      |
  * `-----------------------------------------/       /                \      \-----------------------------------------'
- *                       |      |      | UPPER|      |      |    |      |      |      |      |      |
+ *                       |      | UPPER|      |      |      |    |      |      |      |      |      |
  *                       `----------------------------------'    '------''---------------------------'
  */
     [_UPPER] = LAYOUT(
@@ -353,9 +360,10 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
     ),
 
 /*
- * ADJUST -- held via a dedicated left-thumb key (next to Globe). RGB
- * toggle/mode/saturation/brightness/flags as taps; Hue and Speed on the
- * encoders (left = Hue, right = Speed).
+ * ADJUST -- held via the outermost left-thumb key (previously next to
+ * Globe; Globe now lives at the bottom-left corner finger key instead,
+ * see _BASE). RGB toggle/mode/saturation/brightness/flags as taps; Hue and
+ * Speed on the encoders (left = Hue, right = Speed).
  * Blank cells are transparent (same key as _BASE).
  * ,-----------------------------------------------------.                    ,-----------------------------------------------------.
  * |RGBTog|Mode- |Mode+ | Sat- | Sat+ | Bri- |                                | Bri+ |Flag- |Flag+ |      |      |      |
@@ -366,7 +374,7 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
  * |------+------+------+------+------+------|       |                |       |------+------+------+------+------+------|
  * |      |      |      |      |      |      |-------|                |-------|      |      |      |      |      |      |
  * `-----------------------------------------/       /                \      \-----------------------------------------'
- *                       |      | Adj  |      |      |      |    |      |      |      |      |      |
+ *                       | Adj  |      |      |      |      |    |      |      |      |      |      |
  *                       `----------------------------------'              '------''---------------------------'
  */
     [_ADJUST] = LAYOUT(
