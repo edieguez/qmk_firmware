@@ -56,6 +56,11 @@
 // Required for get_tapping_term() in keymap.c to actually be consulted --
 // see docs/tap_hold.md "Per Key Tapping Term".
 #define TAPPING_TERM_PER_KEY
+// Required for get_hold_on_other_key_press() in keymap.c to actually be
+// consulted -- see docs/tap_hold.md "Hold On Other Key Press". Scoped to
+// the Shift/GUI home row mods only (not a blanket HOLD_ON_OTHER_KEY_PRESS),
+// since it's specifically fixing fast-typing chord detection for those four.
+#define HOLD_ON_OTHER_KEY_PRESS_PER_KEY
 
 // Defaults to 0 (quantum/action.h) -- the wait_ms(TAP_CODE_DELAY) in
 // keymap.c's caps_dance_reset() was a no-op without this, which is why the

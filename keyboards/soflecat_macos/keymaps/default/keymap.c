@@ -199,6 +199,31 @@ uint16_t get_tapping_term(uint16_t keycode, keyrecord_t *record) {
     }
 }
 
+// Further fix for the same "f/"/"kv" symptom, for the case the two fixes
+// above still miss: Permissive Hold (the global default) only settles an
+// opposite-hand chord as held once the *other* key is both pressed AND
+// released while the mod-tap key is still down. At high typing speed the
+// mod-tap key is often released right as (or just after) the other key is
+// pressed, with no overlap left for its release too -- Permissive Hold then
+// sees a "rolling press" rather than a "nested press" and falls back to
+// tap, i.e. exactly the failure this is meant to fix. Hold On Other Key
+// Press (enabled per-key here, so it doesn't affect the Alt/Ctrl home row
+// mods) settles the hold the instant the other key is *pressed*, without
+// waiting for its release -- all it needs is for F/J/D/K to still be
+// physically down at that moment, which is a much easier bar to clear.
+// Requires HOLD_ON_OTHER_KEY_PRESS_PER_KEY in config.h.
+bool get_hold_on_other_key_press(uint16_t keycode, keyrecord_t *record) {
+    switch (keycode) {
+        case LSFT_T(KC_F):
+        case RSFT_T(KC_J):
+        case LGUI_T(KC_D):
+        case RGUI_T(KC_K):
+            return true;
+        default:
+            return false;
+    }
+}
+
 // Shift+Esc sends ~, replacing Grave Escape (QK_GESC), whose built-in
 // GUI-held case is broken on macOS: Cmd+Esc there sends Cmd+` (grave),
 // which macOS intercepts as "move focus to next window" instead of
