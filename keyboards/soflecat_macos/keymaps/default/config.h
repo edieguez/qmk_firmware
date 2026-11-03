@@ -44,13 +44,13 @@
 #define SPLIT_OLED_ENABLE // mirror the master's actual on/off state to the slave, so both OLEDs blank/wake together instead of each half computing its own timeout independently
 #define RGB_MATRIX_MODE_NAME_ENABLE // enables rgb_matrix_get_mode_name() for the OLED status message
 #define RGB_MATRIX_SLEEP     // turn off effects when suspended
-#define SPLIT_TRANSPORT_MIRROR             // If LED_MATRIX_KEYPRESSES or LED_MATRIX_KEYRELEASES is enabled, you also will want to enable SPLIT_TRANSPORT_MIRROR
 #define RGB_MATRIX_MAXIMUM_BRIGHTNESS 100  // limits maximum brightness of LEDs (max 255). Higher may cause the controller to crash.
 
 // Home row mods (A/S/D/F, J/K/L/;): reduce accidental modifier triggers
 // during fast/rolled typing. See docs/tap_hold.md "Configuring Home Row Mods".
 #define TAPPING_TERM 200
 #define PERMISSIVE_HOLD
+#define PERMISSIVE_HOLD_PER_KEY // only Shift/GUI keep it -- see get_permissive_hold() in keymap.c
 #define CHORDAL_HOLD
 #define FLOW_TAP_TERM 150
 // Required for get_tapping_term() in keymap.c to actually be consulted --
