@@ -20,9 +20,6 @@
 
 #ifdef OLED_ENABLE
 
-// Shared size for every status-line buffer below (rgb_status, and
-// render_status()'s shown/last_shown) so they can't drift out of sync with
-// each other and silently truncate if one gets resized without the others.
 #define OLED_STATUS_BUF_LEN 40
 
 #ifdef RGB_MATRIX_ENABLE
@@ -34,8 +31,7 @@ static uint32_t rgb_status_shown_until = 0;
 // RM_SATU/RM_SATD, RM_VALU/RM_VALD, and RM_SPDU/RM_SPDD are no-ops once
 // their property is already maxed/minned out (they use saturating math,
 // unlike hue and flags which wrap around), so the change-based detection
-// below never fires for them at the limit. Set by post_process_record_kb()
-// (after the keypress has already been applied by process_rgb_matrix),
+// below never fires for them at the limit. Set by process_record_kb(),
 // consumed and cleared by the next poll below.
 static bool sat_key_pressed   = false;
 static bool val_key_pressed   = false;
@@ -143,6 +139,8 @@ static char keycode_to_char(uint16_t keycode) {
             return ' ';
         case KC_MINUS:
             return '-';
+        case KC_EQUAL:
+            return '=';
         case KC_LBRC:
             return '[';
         case KC_RBRC:
@@ -194,9 +192,12 @@ static void update_keylog(uint16_t keycode, const keyrecord_t *record) {
     keylog[KEYLOG_LEN - 1] = c;
 }
 
-void post_process_record_kb(uint16_t keycode, keyrecord_t *record) {
-    if (record->event.pressed) {
+// process_rgb_matrix() consumes every RM_* keycode (returns false), which
+// makes process_record() skip post_process_record_kb() for them -- so the
+// flagging has to happen here, in the earlier hook that still sees them.
+bool process_record_kb(uint16_t keycode, keyrecord_t *record) {
 #ifdef RGB_MATRIX_ENABLE
+    if (record->event.pressed) {
         switch (keycode) {
             case RM_SATU:
             case RM_SATD:
@@ -211,7 +212,13 @@ void post_process_record_kb(uint16_t keycode, keyrecord_t *record) {
                 speed_key_pressed = true;
                 break;
         }
+    }
 #endif
+    return process_record_user(keycode, record);
+}
+
+void post_process_record_kb(uint16_t keycode, keyrecord_t *record) {
+    if (record->event.pressed) {
         update_keylog(keycode, record);
     }
     post_process_record_user(keycode, record);
@@ -222,7 +229,7 @@ void post_process_record_kb(uint16_t keycode, keyrecord_t *record) {
 // verbatim from keyboards/splitkb/aurora/sofle_v2 -- see that board's
 // render_layer_state()/render_mod_status_gui_alt()/render_mod_status_ctrl_shift()
 // for the original. Each writes a fixed number of 5-character rows, matching
-// this board's master-half portrait grid (OLED_ROTATION_90, 5 cols x 16 rows)
+// this board's master-half portrait grid (OLED_ROTATION_270, 5 cols x 16 rows)
 // exactly, so render_status() below can lay them out by row range with no
 // extra padding logic.
 
@@ -232,17 +239,17 @@ void post_process_record_kb(uint16_t keycode, keyrecord_t *record) {
 // lower/raise/adjust) don't have a semantic equivalence to this keymap's
 // layers, they're just reused 1:1 in enum order as a visual proxy.
 static void render_layer_icon(uint8_t layer) {
-    static const char PROGMEM base_layer[] = {0x20, 0x94, 0x95, 0x96, 0x20, 0x20, 0xb4, 0xb5, 0xb6, 0x20, 0x20, 0xd4, 0xd5, 0xd6, 0x20, 0};
-    static const char PROGMEM nav_layer[]  = {0x20, 0x9a, 0x9b, 0x9c, 0x20, 0x20, 0xba, 0xbb, 0xbc, 0x20, 0x20, 0xda, 0xdb, 0xdc, 0x20, 0};
-    static const char PROGMEM fn_layer[]   = {0x20, 0x97, 0x98, 0x99, 0x20, 0x20, 0xb7, 0xb8, 0xb9, 0x20, 0x20, 0xd7, 0xd8, 0xd9, 0x20, 0};
+    static const char PROGMEM base_layer[]   = {0x20, 0x94, 0x95, 0x96, 0x20, 0x20, 0xb4, 0xb5, 0xb6, 0x20, 0x20, 0xd4, 0xd5, 0xd6, 0x20, 0};
+    static const char PROGMEM lower_layer[]  = {0x20, 0x9a, 0x9b, 0x9c, 0x20, 0x20, 0xba, 0xbb, 0xbc, 0x20, 0x20, 0xda, 0xdb, 0xdc, 0x20, 0};
+    static const char PROGMEM upper_layer[]  = {0x20, 0x97, 0x98, 0x99, 0x20, 0x20, 0xb7, 0xb8, 0xb9, 0x20, 0x20, 0xd7, 0xd8, 0xd9, 0x20, 0};
     static const char PROGMEM adjust_layer[] = {0x20, 0x9d, 0x9e, 0x9f, 0x20, 0x20, 0xbd, 0xbe, 0xbf, 0x20, 0x20, 0xdd, 0xde, 0xdf, 0x20, 0};
 
     switch (layer) {
         case 1:
-            oled_write_P(nav_layer, false);
+            oled_write_P(lower_layer, false);
             break;
         case 2:
-            oled_write_P(fn_layer, false);
+            oled_write_P(upper_layer, false);
             break;
         case 3:
             oled_write_P(adjust_layer, false);
