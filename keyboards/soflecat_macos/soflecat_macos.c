@@ -182,6 +182,12 @@ static void update_keylog(uint16_t keycode, const keyrecord_t *record) {
             return;
         }
         keycode = QK_MOD_TAP_GET_TAP_KEYCODE(keycode);
+    } else if (IS_QK_LAYER_TAP(keycode)) {
+        // Same for the layer-tap keys (] on tap at [8,0], Backspace at [9,3]).
+        if (record->tap.count == 0) {
+            return;
+        }
+        keycode = QK_LAYER_TAP_GET_TAP_KEYCODE(keycode);
     }
 
     char c = keycode_to_char(keycode);
