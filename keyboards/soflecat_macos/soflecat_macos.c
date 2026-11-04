@@ -30,7 +30,7 @@ static uint32_t rgb_status_shown_until = 0;
 
 // RM_SATU/RM_SATD, RM_VALU/RM_VALD, and RM_SPDU/RM_SPDD are no-ops once
 // their property is already maxed/minned out (they use saturating math,
-// unlike hue and flags which wrap around), so the change-based detection
+// unlike hue, which wraps around), so the change-based detection
 // below never fires for them at the limit. Set by process_record_kb(),
 // consumed and cleared by the next poll below.
 static bool sat_key_pressed   = false;
@@ -42,8 +42,8 @@ static void show_rgb_status(const char *label, uint8_t value) {
     rgb_status_shown_until = timer_read32() + RGB_STATUS_DISPLAY_MS;
 }
 
-// Watches for RGB property changes (toggle/mode/hue/sat/brightness/speed/
-// flags), however they were made -- encoder or key -- and records whichever
+// Watches for RGB property changes (toggle/mode/hue/sat/brightness/speed),
+// however they were made -- encoder or key -- and records whichever
 // one changed most recently into rgb_status, for rgb_status_message() to
 // show for a few seconds.
 static void poll_rgb_status(void) {
@@ -54,7 +54,6 @@ static void poll_rgb_status(void) {
     static uint8_t  last_sat     = 0;
     static uint8_t  last_val     = 0;
     static uint8_t  last_speed   = 0;
-    static uint8_t  last_flags   = 0;
 
     bool    enabled = rgb_matrix_is_enabled();
     uint8_t mode    = rgb_matrix_get_mode();
@@ -62,7 +61,6 @@ static void poll_rgb_status(void) {
     uint8_t sat     = rgb_matrix_get_sat();
     uint8_t val     = rgb_matrix_get_val();
     uint8_t speed   = rgb_matrix_get_speed();
-    uint8_t flags   = rgb_matrix_get_flags();
 
     // Seed the baseline from real state on the first poll instead of diffing
     // against the hardcoded initializers above -- otherwise the persisted
@@ -84,9 +82,6 @@ static void poll_rgb_status(void) {
         show_rgb_status("RGB BRI", val);
     } else if (speed != last_speed || speed_key_pressed) {
         show_rgb_status("RGB SPEED", speed);
-    } else if (flags != last_flags) {
-        snprintf(rgb_status, sizeof(rgb_status), "RGB FLAGS\n0x%02X", flags);
-        rgb_status_shown_until = timer_read32() + RGB_STATUS_DISPLAY_MS;
     }
 
     last_enabled      = enabled;
@@ -95,7 +90,6 @@ static void poll_rgb_status(void) {
     last_sat          = sat;
     last_val          = val;
     last_speed        = speed;
-    last_flags        = flags;
     sat_key_pressed   = false;
     val_key_pressed   = false;
     speed_key_pressed = false;
