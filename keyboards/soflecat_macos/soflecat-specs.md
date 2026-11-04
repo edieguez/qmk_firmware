@@ -1,3 +1,5 @@
+> **Historical.** This describes the old Vial-fork setup (`sofle_choc/`, keymap `vial_full`), not this repo. For the real build see `readme.md`: `make soflecat_macos:default`.
+
 # Sofle Choc Keyboard — Hardware & Firmware Reference
 
 ## Hardware
