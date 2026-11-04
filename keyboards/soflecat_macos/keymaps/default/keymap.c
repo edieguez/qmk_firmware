@@ -36,48 +36,19 @@ enum custom_keycodes {
     // Globe key to" behavior. QMK core has no keycode wired to 0x29D, so
     // it's sent manually below.
     MACOS_GLOBE = SAFE_RANGE,
-    // Like OSM(mod) -- tap to arm a one-shot, hold for a plain modifier --
-    // plus the "tap again to cancel" that OSM lacks: a second tap while
-    // one-shot-armed just re-arms it there (add_oneshot_mods() is
-    // idempotent), since a deliberate second tap comes too late to read as
-    // the rapid double-tap ONESHOT_TAP_TOGGLE wants. See
-    // process_oneshot_key() below.
-    OS_SFT,
-    OS_CMD,
 };
 
-// Press registers the real modifier straight away, so a hold chords like a
-// normal Shift/Cmd (hold Shift + arrows, "QMK"). Release decides what the
-// press was: a quick, uninterrupted press was a tap and arms the one-shot;
-// anything else was a hold and just ends. A press while that mod is
-// already one-shot-armed cancels it instead.
-static uint8_t  os_held_mods       = 0;
-static bool     os_held_interrupted = false;
-static uint16_t os_pressed_at      = 0;
-
-static void process_oneshot_key(uint8_t mod, keyrecord_t *record) {
-    if (record->event.pressed) {
-        if (get_oneshot_mods() & mod) {
-            del_oneshot_mods(mod);
-            return;
-        }
-        register_mods(mod);
-        os_held_mods |= mod;
-        os_held_interrupted = false;
-        os_pressed_at       = timer_read();
-    } else if (os_held_mods & mod) {
-        unregister_mods(mod);
-        os_held_mods &= ~mod;
-        if (!os_held_interrupted && timer_elapsed(os_pressed_at) < TAPPING_TERM) {
-            add_oneshot_mods(mod);
-        }
-    }
-}
+// Bottom-right pinky corner [8,0]: ] on tap, Adjust on hold.
+#define ADJ_RBRC LT(_ADJUST, KC_RBRC)
+// Right thumb [9,3]: Backspace on tap, Upper on hold. Holding it from rest
+// is the layer, not key repeat; tap and immediately press-and-hold again
+// to auto-repeat Backspace (QMK's quick-tap rule, QUICK_TAP_TERM, which
+// defaults to TAPPING_TERM). Kept out of get_permissive_hold() on purpose:
+// Backspace rolled straight into a retyped left-hand letter is a very
+// common sequence, and Permissive Hold would turn that roll into an F-key.
+#define UPP_BSPC LT(_UPPER, KC_BSPC)
 
 bool process_record_user(uint16_t keycode, keyrecord_t *record) {
-    if (record->event.pressed && os_held_mods && keycode != OS_SFT && keycode != OS_CMD) {
-        os_held_interrupted = true;
-    }
     switch (keycode) {
         case MACOS_GLOBE:
             if (record->event.pressed) {
@@ -85,12 +56,6 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
             } else {
                 host_consumer_send(0);
             }
-            return false;
-        case OS_SFT:
-            process_oneshot_key(MOD_BIT(KC_LSFT), record);
-            return false;
-        case OS_CMD:
-            process_oneshot_key(MOD_BIT(KC_LGUI), record);
             return false;
         default:
             return true;
@@ -231,12 +196,16 @@ uint16_t get_tapping_term(uint16_t keycode, keyrecord_t *record) {
 // looks like, so "also" became "a" + Alt+L + Ctrl+S ("aso"/"alo"). Keep it
 // only for Shift/GUI (F/J/D/K), which need fast chords ("?", Cmd+V); the
 // Alt/Ctrl keys (A/S/L/;) now only hold once held past the tapping term.
+// The ]/Adjust corner key gets it too, so a quick Adjust + opposite-hand
+// key reads as the layer rather than ] plus the base key (same-hand keys
+// still settle it as a tap, per Chordal Hold).
 bool get_permissive_hold(uint16_t keycode, keyrecord_t *record) {
     switch (keycode) {
         case LSFT_T(KC_F):
         case RSFT_T(KC_J):
         case LGUI_T(KC_D):
         case RGUI_T(KC_K):
+        case ADJ_RBRC:
             return true;
         default:
             return false;
@@ -285,23 +254,35 @@ const char chordal_hold_layout[MATRIX_ROWS][MATRIX_COLS] PROGMEM = LAYOUT(
 
 const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
 /*
- * BASE -- thumb clusters: Adjust|OS_Cmd|OS_Sft|Lower|Space on the left,
- * Enter|Bspc|Upper|[|] on the right. Lower and Adjust are left-thumb
- * holds so the right hand can stay on the mouse; the two One Shot Mods
- * (OSM) are on the left for the same reason -- they exist for
- * mouse-chorded actions like Cmd-click multiselect or Shift-click
- * range-select, so arming them must not pull the mouse hand back to the
- * keyboard. A single tap latches the modifier until the next *keyboard*
- * keypress clears it: QMK never sees mouse clicks as key events, so a
- * click neither resolves a mod-tap's hold/tap decision in time (which is
- * why LGUI_T(KC_D)/LSFT_T(KC_F) don't work for this) nor clears a one-shot
- * early. These are the custom OS_SFT/OS_CMD keycodes (see enum
- * custom_keycodes above), not plain OSM(): tapping again while armed
- * cancels instead of re-arming; holding still works as a plain modifier
- * like OSM() does. Upper (F1-F12) took OS_Cmd's old right
- * thumb slot in exchange; F1-F5 are then an opposite-hand reach. Globe
- * (rare: keyboard-layout switching) and = (less frequent than the
- * brackets) were judged cheapest to demote to the pinky corners.
+ * BASE -- thumb clusters, by matrix position ([row,col], columns counted
+ * from the outer edge inward): left [4,0] PgDn, [4,1] PgUp, [4,2] Globe,
+ * [4,3] Lower, [4,4] Space; right [9,4] Enter, [9,3] Bspc tap / Upper hold
+ * (UPP_BSPC), [9,2] =, [9,1] Home, [9,0] End. Lower is a left-thumb hold
+ * so the right hand can stay on the mouse and its keys are a right-hand
+ * reach; Upper is a right-thumb hold, so _UPPER's F-keys live on the left
+ * half. Adjust is the bottom-right pinky corner ([8,0], ] on tap --
+ * ADJ_RBRC). The navigation cluster takes the four stretch keys: page keys
+ * on the left (the hand that stays on the keyboard while the right one is
+ * on the mouse), PgDn then PgUp left-to-right to match U/I on _LOWER and
+ * J/K Down/Up; Home then End on the right in reading order. Raw
+ * KC_HOME/KC_END scroll a view to its top/bottom in most macOS apps and
+ * move the cursor only in editors/terminals -- the Cmd+arrow line keys on
+ * _LOWER cover line start/end. Globe (rare: keyboard-layout switching)
+ * gets the remaining reach. = is tapped far more often than a layer is
+ * held, hence its good thumb position. Delete is Lower+N; backtick is
+ * Option+' or Lower+Esc. (Tried on thumbs and dropped as unused or
+ * unwanted: custom one-shot Shift/Cmd, dedicated Delete, a thumb backtick,
+ * Layer Lock, Dynamic Macro play, Tab/Esc ideas.)
+ *
+ * Shift is a home row mod (LSFT_T(KC_F)/RSFT_T(KC_J)), with the per-key
+ * Flow Tap / tapping-term / Permissive Hold overrides below tuned for it.
+ * It's the one HRM that misfires at speed ("f/" for "?", "fi" for "I":
+ * zero key overlap, which no tap-hold heuristic can resolve); a pair of
+ * plain dedicated Shift keys on the bottom pinky corners ([3,0]/[8,0]) was
+ * tried instead and disliked in use, so Shift went back to the home row
+ * and the corners hold [ and ] (previously on the right thumb), with
+ * Adjust as the hold of ]. = has its own thumb key; the Option+- key
+ * override stays as a second path for it.
  * ,-----------------------------------------------------.                    ,-----------------------------------------------------.
  * | Esc  |   1  |   2  |   3  |   4  |   5  |                                |   6  |   7  |   8  |   9  |   0  |   -  |
  * |------+------+------+------+------+------|                                |------+------+------+------+------+------|
@@ -309,17 +290,17 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
  * |------+------+------+------+------+------|                                |------+------+------+------+------+------|
  * |CW/Caps|A/LAlt|S/LCtl|D/LGui|F/LSft|   G  |-------.                ,-------|   H  |J/RSft|K/RGui|L/RCtl|;/RAlt|  '   |
  * |------+------+------+------+------+------|  Mute |                | Play  |------+------+------+------+------+------|
- * |Globe  |   Z  |   X  |   C  |   V  |   B  |-------|                |-------|   N  |   M  |   ,  |   .  |   /  |  =   |
+ * |  [   |   Z  |   X  |   C  |   V  |   B  |-------|                |-------|   N  |   M  |   ,  |   .  |   /  |]/Adj |
  * `-----------------------------------------/       /                \      \-----------------------------------------'
- *                       | Adj  |OS_Cmd|OS_Sft|LOWER | Space|    |Enter | Bspc |UPPER |  [   |  ]   |
+ *                       | PgDn | PgUp |Globe |LOWER | Space|    |Enter |Bs/Upp|  =   | Home | End  |
  *                       `----------------------------------'              '------''---------------------------'
  */
     [_BASE] = LAYOUT(
         KC_ESC,      KC_1,          KC_2,          KC_3,          KC_4,          KC_5,                                          KC_6,          KC_7,          KC_8,          KC_9,          KC_0,            KC_MINUS,
         KC_TAB,      KC_Q,          KC_W,          KC_E,          KC_R,          KC_T,                                          KC_Y,          KC_U,          KC_I,          KC_O,          KC_P,            KC_BSLS,
         TD(TD_CAPS), LALT_T(KC_A),  LCTL_T(KC_S),  LGUI_T(KC_D),  LSFT_T(KC_F),  KC_G,                                          KC_H,          RSFT_T(KC_J),  RGUI_T(KC_K),  RCTL_T(KC_L),  RALT_T(KC_SCLN), KC_QUOTE,
-        MACOS_GLOBE,   KC_Z,          KC_X,          KC_C,          KC_V,          KC_B,    KC_MUTE,             KC_MPLY,        KC_N,          KC_M,          KC_COMMA,      KC_DOT,        KC_SLASH,        KC_EQUAL,
-                                                    MO(_ADJUST),   OS_CMD,       OS_SFT,    MO(_LOWER), KC_SPACE, KC_ENTER, KC_BSPC, MO(_UPPER), KC_LBRC,    KC_RBRC
+        KC_LBRC,     KC_Z,          KC_X,          KC_C,          KC_V,          KC_B,    KC_MUTE,             KC_MPLY,        KC_N,          KC_M,          KC_COMMA,      KC_DOT,        KC_SLASH,        ADJ_RBRC,
+                                                    KC_PGDN,       KC_PGUP,      MACOS_GLOBE, MO(_LOWER), KC_SPACE, KC_ENTER, UPP_BSPC, KC_EQUAL, KC_HOME,   KC_END
     ),
 
 /*
@@ -333,12 +314,12 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
  * inconsistently). The thumb-cluster Backspace key sends
  * Option+Backspace here (word delete backwards), and the thumb-cluster
  * Enter key sends Shift+Enter (newline without submitting, for chat apps).
- * Delete lives at the N finger position (no dedicated thumb key for it --
- * all 10 thumb keys are spoken for). Grave/tilde (no dedicated thumb key
- * free for it either) lands on the Esc finger position: hold LOWER, tap
- * the top-left key for ` (Shift for ~). The remaining thumb keys (Adjust/
- * OS_Cmd/OS_Sft taps, and Upper/[/] on the right) just keep their _BASE
- * meaning here, transparent. Each overrides its _BASE meaning. Blank
+ * Delete lives at the N finger position (a dedicated thumb Delete was
+ * tried and not wanted). Grave/tilde lands on the Esc finger position:
+ * hold LOWER, tap the top-left key for ` (Shift for ~); Option+' is the
+ * other path. The remaining thumb keys just keep their _BASE
+ * meaning here, transparent. Each overrides
+ * its _BASE meaning. Blank
  * cells are transparent (same key as _BASE).
  * ,-----------------------------------------------------.                    ,-----------------------------------------------------.
  * |   `  |      |      |      |      |      |                                |      |      |      |      |      |LnStrt|
@@ -361,42 +342,50 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
     ),
 
 /*
- * UPPER (formerly "FN") -- F1-F12 on the number row (F11/F12 on T/Y). Blank
- * cells are transparent (same key as _BASE).
+ * UPPER (formerly "FN") -- held by the right thumb (Backspace key, [9,3]),
+ * so all twelve F-keys live under the left hand as one 5-wide block in
+ * reading order, starting on the Q row: F1-F5, F6-F10 (which lands on the
+ * home row), F11-F12. One rule to remember, every F-key an opposite-hand
+ * press. (They used to sit on the number row, F1-F5 left / F6-F10 right,
+ * with F11/F12 on T/Y; the block has flipped halves along with the Upper
+ * key.) Blank cells are transparent (same key as _BASE).
  * ,-----------------------------------------------------.                    ,-----------------------------------------------------.
- * |      |  F1  |  F2  |  F3  |  F4  |  F5  |                                |  F6  |  F7  |  F8  |  F9  |  F10 |      |
+ * |      |      |      |      |      |      |                                |      |      |      |      |      |      |
  * |------+------+------+------+------+------|                                |------+------+------+------+------+------|
- * |      |      |      |      |      |  F11 |                                |  F12 |      |      |      |      |      |
+ * |      |  F1  |  F2  |  F3  |  F4  |  F5  |                                |      |      |      |      |      |      |
  * |------+------+------+------+------+------|                                |------+------+------+------+------+------|
- * |      |      |      |      |      |      |-------.                ,-------|      |      |      |      |      |      |
+ * |      |  F6  |  F7  |  F8  |  F9  |  F10 |-------.                ,-------|      |      |      |      |      |      |
  * |------+------+------+------+------+------|       |                |       |------+------+------+------+------+------|
- * |      |      |      |      |      |      |-------|                |-------|      |      |      |      |      |      |
+ * |      |  F11 |  F12 |      |      |      |-------|                |-------|      |      |      |      |      |      |
  * `-----------------------------------------/       /                \      \-----------------------------------------'
- *                       |      |      |      |      |      |    |      |      | UPPER|      |      |
+ *                       |      |      |      |      |      |    |      |UPPER |      |      |      |
  *                       `----------------------------------'    '------''---------------------------'
  */
     [_UPPER] = LAYOUT(
-        KC_TRNS,  KC_F1,   KC_F2,   KC_F3,   KC_F4,   KC_F5,                                       KC_F6,   KC_F7,   KC_F8,    KC_F9,   KC_F10,  KC_TRNS,
-        KC_TRNS,  KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_F11,                                       KC_F12,  KC_TRNS, KC_TRNS,  KC_TRNS, KC_TRNS, KC_TRNS,
         KC_TRNS,  KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS,                                     KC_TRNS, KC_TRNS, KC_TRNS,  KC_TRNS, KC_TRNS, KC_TRNS,
-        KC_TRNS,  KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS,          KC_TRNS,           KC_TRNS, KC_TRNS, KC_TRNS,  KC_TRNS, KC_TRNS, KC_TRNS,
+        KC_TRNS,  KC_F1,   KC_F2,   KC_F3,   KC_F4,   KC_F5,                                       KC_TRNS, KC_TRNS, KC_TRNS,  KC_TRNS, KC_TRNS, KC_TRNS,
+        KC_TRNS,  KC_F6,   KC_F7,   KC_F8,   KC_F9,   KC_F10,                                      KC_TRNS, KC_TRNS, KC_TRNS,  KC_TRNS, KC_TRNS, KC_TRNS,
+        KC_TRNS,  KC_F11,  KC_F12,  KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS,          KC_TRNS,           KC_TRNS, KC_TRNS, KC_TRNS,  KC_TRNS, KC_TRNS, KC_TRNS,
                                     KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS,  KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS
     ),
 
 /*
- * ADJUST -- held via the outermost left-thumb key. Row 1 is every RGB
+ * ADJUST -- held via the bottom-right pinky corner ([8,0], ] on tap). Row 1 is every RGB
  * matrix control, laid out so no -/+ pair straddles the two halves (the
  * Flag-/Flag+ keys were dropped: all 58 LEDs carry the same keylight flag,
  * so cycling flags was just a four-step version of RGBTog). Row 2 carries
  * the macOS F-row functions that have no knob position, on the same columns
  * their F-key counterparts occupy on _UPPER (W/E/R = F3/F4/F5): Mission
- * Control, Spotlight (Cmd+Space), Dictation. Dictation and Do Not Disturb
+ * Control, Spotlight (Cmd+Space), Dictation. (That column alignment is
+ * historical: _UPPER's F-keys have since moved to a left-hand block.)
+ * Dictation and Do Not Disturb
  * have no HID usage QMK can send (Apple uses a vendor page), so they're
  * chords that must be bound once in System Settings: Ctrl+Opt+Cmd+D for
  * Keyboard > Dictation > Shortcut, Ctrl+Opt+Cmd+N for Keyboard Shortcuts >
  * Mission Control > "Turn Do Not Disturb On/Off". The knobs here are media,
- * not RGB, and both on the right knob so they're a free-hand reach while
- * the left thumb holds Adjust: click = Do Not Disturb (F6), turn =
+ * not RGB, and both on the right knob (placed there as a free-hand reach
+ * back when Adjust was a left-thumb hold; with Adjust now on the right
+ * pinky they're a same-hand reach): click = Do Not Disturb (F6), turn =
  * previous/next track (F7/F9). Left click stays transparent (Mute).
  * Blank cells are transparent (same key as _BASE).
  * ,-----------------------------------------------------.                    ,-----------------------------------------------------.
@@ -408,7 +397,7 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
  * |------+------+------+------+------+------|       |                |  DND  |------+------+------+------+------+------|
  * |      |      |      |      |      |      |-------|                |-------|      |      |      |      |      |      |
  * `-----------------------------------------/       /                \      \-----------------------------------------'
- *                       | Adj  |      |      |      |      |    |      |      |      |      |      |
+ *                       |      |      |      |      |      |    |      |      |      |      |      |
  *                       `----------------------------------'              '------''---------------------------'
  */
     [_ADJUST] = LAYOUT(
