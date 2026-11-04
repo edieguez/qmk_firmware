@@ -23,7 +23,7 @@ enum layers {
 };
 
 enum {
-    // Caps Lock on tap, Caps Word toggle on double-tap.
+    // Caps Word on tap, Caps Lock on double-tap (see caps_dance_finished).
     TD_CAPS = 0,
 };
 
@@ -97,7 +97,9 @@ static void caps_dance_finished(tap_dance_state_t *state, void *user_data) {
 
 static void caps_dance_reset(tap_dance_state_t *state, void *user_data) {
     if (caps_dance_sent_capslock) {
-        wait_ms(TAP_CODE_DELAY);
+        // macOS ignores a Caps Lock press that releases too fast. Kept local
+        // on purpose: a global TAP_CODE_DELAY also stalls every knob step.
+        wait_ms(100);
         unregister_code(KC_CAPS);
     }
 }
@@ -317,10 +319,8 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
  * Delete lives at the N finger position (a dedicated thumb Delete was
  * tried and not wanted). Grave/tilde lands on the Esc finger position:
  * hold LOWER, tap the top-left key for ` (Shift for ~); Option+' is the
- * other path. The remaining thumb keys just keep their _BASE
- * meaning here, transparent. Each overrides
- * its _BASE meaning. Blank
- * cells are transparent (same key as _BASE).
+ * other path. The remaining thumb keys just keep their _BASE meaning
+ * here, transparent. Blank cells are transparent (same key as _BASE).
  * ,-----------------------------------------------------.                    ,-----------------------------------------------------.
  * |   `  |      |      |      |      |      |                                |      |      |      |      |      |LnStrt|
  * |------+------+------+------+------+------|                                |------+------+------+------+------+------|

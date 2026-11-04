@@ -56,10 +56,3 @@
 // Required for get_tapping_term() in keymap.c to actually be consulted --
 // see docs/tap_hold.md "Per Key Tapping Term".
 #define TAPPING_TERM_PER_KEY
-
-// Defaults to 0 (quantum/action.h) -- the wait_ms(TAP_CODE_DELAY) in
-// keymap.c's caps_dance_reset() was a no-op without this, which is why the
-// double-tap-to-Caps-Lock tap dance didn't actually fix anything until now.
-// 100ms matches the value docs/config_options.md itself suggests for "issues
-// with it registering properly".
-#define TAP_CODE_DELAY 100
