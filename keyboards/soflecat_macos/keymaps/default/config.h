@@ -42,6 +42,7 @@
 #define SPLIT_WPM_ENABLE     // sync WPM from master to the slave half for the bongocat OLED
 #define SPLIT_ACTIVITY_ENABLE // sync matrix activity timestamps so the slave's OLED (bongocat) doesn't sleep mid-typing when it's only seeing keypresses from the other half
 #define SPLIT_OLED_ENABLE // mirror the master's actual on/off state to the slave, so both OLEDs blank/wake together instead of each half computing its own timeout independently
+#define SPLIT_LAYER_STATE_ENABLE // the slave runs its own rgb_matrix_indicators hook; it needs the layer state to light its 29 LEDs for the active-layer overlay in keymap.c
 #define RGB_MATRIX_MODE_NAME_ENABLE // enables rgb_matrix_get_mode_name() for the OLED status message
 #define RGB_MATRIX_SLEEP     // turn off effects when suspended
 #define RGB_MATRIX_MAXIMUM_BRIGHTNESS 100  // limits maximum brightness of LEDs (max 255). Higher may cause the controller to crash.
