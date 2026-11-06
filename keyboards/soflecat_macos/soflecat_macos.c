@@ -27,6 +27,10 @@
 
 static char     rgb_status[OLED_STATUS_BUF_LEN] = "";
 static uint32_t rgb_status_shown_until = 0;
+// Bumped on every new message so render_status() knows to clear the screen:
+// oled_write() only overwrites the cells it draws, and a shorter mode name
+// would otherwise leave the tail of the previous one on screen.
+static uint8_t  rgb_status_version = 0;
 
 // RM_SATU/RM_SATD, RM_VALU/RM_VALD, and RM_SPDU/RM_SPDD are no-ops once
 // their property is already maxed/minned out (they use saturating math,
@@ -40,6 +44,7 @@ static bool speed_key_pressed = false;
 static void show_rgb_status(const char *label, uint8_t value) {
     snprintf(rgb_status, sizeof(rgb_status), "%s\n%u", label, value);
     rgb_status_shown_until = timer_read32() + RGB_STATUS_DISPLAY_MS;
+    rgb_status_version++;
 }
 
 // Watches for RGB property changes (toggle/mode/hue/sat/brightness/speed),
@@ -71,9 +76,11 @@ static void poll_rgb_status(void) {
     } else if (enabled != last_enabled) {
         snprintf(rgb_status, sizeof(rgb_status), "RGB\n%s", enabled ? "ON" : "OFF");
         rgb_status_shown_until = timer_read32() + RGB_STATUS_DISPLAY_MS;
+        rgb_status_version++;
     } else if (mode != last_mode) {
         snprintf(rgb_status, sizeof(rgb_status), "RGB MODE\n%s", rgb_matrix_get_mode_name(mode));
         rgb_status_shown_until = timer_read32() + RGB_STATUS_DISPLAY_MS;
+        rgb_status_version++;
     } else if (hue != last_hue) {
         show_rgb_status("RGB HUE", hue);
     } else if (sat != last_sat || sat_key_pressed) {
@@ -355,11 +362,12 @@ static void render_status(void) {
     // switching between an RGB message overlay and the normal status
     // display leaves stale characters behind unless the display is cleared
     // first. Every row below always writes its full fixed-width footprint,
-    // so the RGB-message-vs-normal-mode switch is the only real
-    // content-shape change left to guard against (no per-row tracking
-    // needed).
-    static bool last_was_rgb_message = false;
-    bool        is_rgb_message       = rgb_message != NULL;
+    // so the RGB-message-vs-normal-mode switch and a change of message
+    // text are the only content-shape changes left to guard against (no
+    // per-row tracking needed).
+    static bool    last_was_rgb_message = false;
+    static uint8_t drawn_rgb_version    = 0;
+    bool           is_rgb_message       = rgb_message != NULL;
     if (is_rgb_message != last_was_rgb_message) {
         oled_clear();
         last_was_rgb_message = is_rgb_message;
@@ -368,6 +376,14 @@ static void render_status(void) {
     oled_set_cursor(0, 0);
 
     if (rgb_message != NULL) {
+#ifdef RGB_MATRIX_ENABLE
+        // A new message replacing one still on screen (stepping through
+        // modes) also needs the clear, or the two names overlap.
+        if (drawn_rgb_version != rgb_status_version) {
+            oled_clear();
+            drawn_rgb_version = rgb_status_version;
+        }
+#endif
         oled_write(rgb_message, false);
         return;
     }

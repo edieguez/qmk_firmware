@@ -43,6 +43,16 @@
 #define SPLIT_ACTIVITY_ENABLE // sync matrix activity timestamps so the slave's OLED (bongocat) doesn't sleep mid-typing when it's only seeing keypresses from the other half
 #define SPLIT_OLED_ENABLE // mirror the master's actual on/off state to the slave, so both OLEDs blank/wake together instead of each half computing its own timeout independently
 #define SPLIT_LAYER_STATE_ENABLE // the slave runs its own rgb_matrix_indicators hook; it needs the layer state to light its 29 LEDs for the active-layer overlay in keymap.c
+// Reactive RGB effects (solid_reactive*, multisplash, typing_heatmap in
+// keyboard.json) need key events fed to the matrix, and the half without USB
+// only sees the other half's presses with the transport mirror on.
+#define RGB_MATRIX_KEYPRESSES
+#define RGB_MATRIX_FRAMEBUFFER_EFFECTS // typing_heatmap keeps a per-key heat buffer
+#define SPLIT_TRANSPORT_MIRROR
+// The solid_reactive effects take their flash hue from the clock instead of
+// the fixed user hue, so colors drift through the wheel over time (speed
+// keys set the rate).
+#define RGB_MATRIX_SOLID_REACTIVE_GRADIENT_MODE
 #define RGB_MATRIX_MODE_NAME_ENABLE // enables rgb_matrix_get_mode_name() for the OLED status message
 #define RGB_MATRIX_SLEEP     // turn off effects when suspended
 #define OLED_FADE_OUT            // OLEDs fade at the timeout instead of cutting to black
