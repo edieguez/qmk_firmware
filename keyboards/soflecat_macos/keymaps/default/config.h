@@ -45,6 +45,8 @@
 #define SPLIT_LAYER_STATE_ENABLE // the slave runs its own rgb_matrix_indicators hook; it needs the layer state to light its 29 LEDs for the active-layer overlay in keymap.c
 #define RGB_MATRIX_MODE_NAME_ENABLE // enables rgb_matrix_get_mode_name() for the OLED status message
 #define RGB_MATRIX_SLEEP     // turn off effects when suspended
+#define OLED_FADE_OUT            // OLEDs fade at the timeout instead of cutting to black
+#define OLED_FADE_OUT_INTERVAL 5 // 0-15, larger is slower
 #define RGB_MATRIX_MAXIMUM_BRIGHTNESS 100  // limits maximum brightness of LEDs (max 255). Higher may cause the controller to crash.
 
 // Home row mods (A/S/D/F, J/K/L/;): reduce accidental modifier triggers
@@ -57,3 +59,12 @@
 // Required for get_tapping_term() in keymap.c to actually be consulted --
 // see docs/tap_hold.md "Per Key Tapping Term".
 #define TAPPING_TERM_PER_KEY
+// Speculative Hold: press the modifier the instant a mod-tap goes down and
+// take it back if the key turns out to be a tap. Makes Shift/Cmd+click and
+// Shift-select with the mouse instant instead of waiting for the tap-hold
+// decision. Which keys get it is decided by get_speculative_hold() in
+// keymap.c (the Shift/GUI four). The flow term keeps it off within 150ms of
+// the previous key, so ordinary fast typing doesn't send "flashing"
+// lone-modifier presses; macOS binds nothing to a lone Shift/Cmd anyway.
+#define SPECULATIVE_HOLD
+#define SPECULATIVE_HOLD_FLOW_TERM 150
