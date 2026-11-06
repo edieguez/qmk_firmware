@@ -413,6 +413,47 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
     ),
 };
 
+#ifdef RGB_MATRIX_ENABLE
+// While a layer is held, light only the keys that do something on it, in a
+// per-layer color, and black out the rest -- a map of the layer under your
+// fingers (borrowed from keyboards/decent/tkl). A key counts as "does
+// something" when its keycode on that layer is above KC_TRNS (KC_NO = 0,
+// KC_TRNS = 1), so the layer-hold key itself stays dark: it's transparent on
+// its own layer. Each half runs this hook for its own LED range only, which
+// is why config.h sets SPLIT_LAYER_STATE_ENABLE -- without it the slave half
+// never learns the layer changed. To let the running effect show through on
+// the unused keys instead of black, drop the else branch.
+bool rgb_matrix_indicators_advanced_user(uint8_t led_min, uint8_t led_max) {
+    uint8_t layer = get_highest_layer(layer_state);
+    if (layer == _BASE) {
+        return true;
+    }
+    uint8_t hue;
+    switch (layer) {
+        case _LOWER:  hue = 128; break; // cyan
+        case _UPPER:  hue = 85;  break; // green
+        default:      hue = 21;  break; // orange (_ADJUST)
+    }
+    // Current brightness, so the overlay respects RGB_MATRIX_MAXIMUM_BRIGHTNESS.
+    RGB on = hsv_to_rgb((HSV){hue, 255, rgb_matrix_get_val()});
+
+    for (uint8_t row = 0; row < MATRIX_ROWS; row++) {
+        for (uint8_t col = 0; col < MATRIX_COLS; col++) {
+            uint8_t index = g_led_config.matrix_co[row][col];
+            if (index < led_min || index >= led_max || index == NO_LED) {
+                continue;
+            }
+            if (keymap_key_to_keycode(layer, (keypos_t){col, row}) > KC_TRNS) {
+                rgb_matrix_set_color(index, on.r, on.g, on.b);
+            } else {
+                rgb_matrix_set_color(index, 0, 0, 0);
+            }
+        }
+    }
+    return false;
+}
+#endif
+
 #if defined(ENCODER_MAP_ENABLE)
 const uint16_t PROGMEM encoder_map[][NUM_ENCODERS][NUM_DIRECTIONS] = {
     // _BASE mirrors the Magic Keyboard F-row: left = brightness (F1/F2,
