@@ -224,17 +224,16 @@ bool get_permissive_hold(uint16_t keycode, keyrecord_t *record) {
 // Cmd still held, while Shift+Esc keeps working as before.
 const key_override_t tilde_esc_override = ko_make_basic(MOD_MASK_SHIFT, KC_ESC, S(KC_GRV));
 
-// Option+letter overrides for symbols that are awkward to reach otherwise
-// (no thumb/layer hold needed, and unlike Combos these only fire when
-// Option is actually held, so there's no simultaneous-press timing window
-// to misfire during normal typing). Option is already one reach away via
-// the LALT_T(KC_A)/RALT_T(KC_SCLN) home row mods.
-const key_override_t equal_key_override = ko_make_basic(MOD_MASK_ALT, KC_MINUS, KC_EQUAL);
+// Option+' sends backtick, a symbol with no direct key (no thumb/layer hold
+// needed, and unlike Combos this only fires when Option is actually held,
+// so there's no simultaneous-press timing window to misfire during normal
+// typing). Option is already one reach away via the LALT_T(KC_A)/
+// RALT_T(KC_SCLN) home row mods. An Option+- override for = used to sit
+// here too; it went when = got its own thumb key.
 const key_override_t grave_key_override = ko_make_basic(MOD_MASK_ALT, KC_QUOTE, KC_GRV);
 
 const key_override_t *key_overrides[] = {
     &tilde_esc_override,
-    &equal_key_override,
     &grave_key_override,
 };
 
@@ -271,8 +270,9 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
  * move the cursor only in editors/terminals -- the Cmd+arrow line keys on
  * _LOWER cover line start/end. Globe (rare: keyboard-layout switching)
  * gets the remaining reach. = is tapped far more often than a layer is
- * held, hence its good thumb position. Delete is Lower+N; backtick is
- * Option+' or Lower+Esc. (Tried on thumbs and dropped as unused or
+ * held, hence its good thumb position (it was also reachable as Option+-
+ * via a key override, dropped as a duplicate). Delete is Lower+N; backtick
+ * is Option+' or Lower+Esc. (Tried on thumbs and dropped as unused or
  * unwanted: custom one-shot Shift/Cmd, dedicated Delete, a thumb backtick,
  * Layer Lock, Dynamic Macro play, Tab/Esc ideas.)
  *
@@ -283,8 +283,7 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
  * plain dedicated Shift keys on the bottom pinky corners ([3,0]/[8,0]) was
  * tried instead and disliked in use, so Shift went back to the home row
  * and the corners hold [ and ] (previously on the right thumb), with
- * Adjust as the hold of ]. = has its own thumb key; the Option+- key
- * override stays as a second path for it.
+ * Adjust as the hold of ]. = has its own thumb key.
  * ,-----------------------------------------------------.                    ,-----------------------------------------------------.
  * | Esc  |   1  |   2  |   3  |   4  |   5  |                                |   6  |   7  |   8  |   9  |   0  |   -  |
  * |------+------+------+------+------+------|                                |------+------+------+------+------+------|
@@ -308,8 +307,9 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
 /*
  * LOWER (formerly "NAV") -- arrows plus macOS-native word/line/document
  * navigation stacked around the arrow cluster: Option+Left/Right (word
- * jump) and Page Down/Up (one screen, cursor stays put) above the arrows
- * they scale up, and Option+Delete (word delete) next to it. macOS's own
+ * jump) above the arrows they scale up, and Option+Delete (word delete)
+ * next to it (Page Down/Up are the left thumb keys); the right knob also
+ * word-jumps on turn, for running through several words. macOS's own
  * Home/End equivalents -- Cmd+Left/Right (line start/end) and Cmd+Up/Down
  * (document start/end) -- live in the outer column, in that order,
  * standing in for the raw Home/End keycodes (which macOS handles
@@ -324,7 +324,7 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
  * ,-----------------------------------------------------.                    ,-----------------------------------------------------.
  * |   `  |      |      |      |      |      |                                |      |      |      |      |      |LnStrt|
  * |------+------+------+------+------+------|                                |------+------+------+------+------+------|
- * |      |      |      |      |      |      |                                | wLeft| PgDn | PgUp |wRight|      | LnEnd|
+ * |      |      |      |      |      |      |                                | wLeft|      |      |wRight|      | LnEnd|
  * |------+------+------+------+------+------|                                |------+------+------+------+------+------|
  * |      |      |      |      |      |      |-------.                ,-------|  Left|  Down|   Up | Right|      |DocTop|
  * |------+------+------+------+------+------|       |                |       |------+------+------+------+------+------|
@@ -335,7 +335,7 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
  */
     [_LOWER] = LAYOUT(
         KC_GRV,   KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS,                                     KC_TRNS,    KC_TRNS, KC_TRNS,   KC_TRNS,     KC_TRNS,    G(KC_LEFT),
-        KC_TRNS,  KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS,                                     A(KC_LEFT), KC_PGDN, KC_PGUP,   A(KC_RIGHT), KC_TRNS,   G(KC_RIGHT),
+        KC_TRNS,  KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS,                                     A(KC_LEFT), KC_TRNS, KC_TRNS,   A(KC_RIGHT), KC_TRNS,   G(KC_RIGHT),
         KC_TRNS,  KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS,                                     KC_LEFT,    KC_DOWN, KC_UP,     KC_RIGHT,    KC_TRNS,    G(KC_UP),
         KC_TRNS,  KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS,          KC_TRNS,           KC_DEL,     KC_TRNS,    KC_TRNS, KC_TRNS,     KC_TRNS,   G(KC_DOWN),
                                     KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, S(KC_ENTER),    A(KC_BSPC), KC_TRNS, KC_TRNS, KC_TRNS
@@ -344,28 +344,30 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
 /*
  * UPPER (formerly "FN") -- held by the right thumb (Backspace key, [9,3]),
  * so all twelve F-keys live under the left hand as one 5-wide block in
- * reading order, starting on the Q row: F1-F5, F6-F10 (which lands on the
- * home row), F11-F12. One rule to remember, every F-key an opposite-hand
+ * reading order, starting on the number row: F1-F5 on 1-5 (so key 3 = F3,
+ * as on a plain keyboard), F6-F10 on Q-T, and F11/F12 under the middle and
+ * index fingers on the home row (D/F). Every F-key is an opposite-hand
  * press. (They used to sit on the number row, F1-F5 left / F6-F10 right,
  * with F11/F12 on T/Y; the block has flipped halves along with the Upper
- * key.) Blank cells are transparent (same key as _BASE).
+ * key.) The left knob is zoom: turn = Cmd+-/Cmd+= (out/in), click = Cmd+0
+ * (reset). Blank cells are transparent (same key as _BASE).
  * ,-----------------------------------------------------.                    ,-----------------------------------------------------.
- * |      |      |      |      |      |      |                                |      |      |      |      |      |      |
- * |------+------+------+------+------+------|                                |------+------+------+------+------+------|
  * |      |  F1  |  F2  |  F3  |  F4  |  F5  |                                |      |      |      |      |      |      |
  * |------+------+------+------+------+------|                                |------+------+------+------+------+------|
- * |      |  F6  |  F7  |  F8  |  F9  |  F10 |-------.                ,-------|      |      |      |      |      |      |
- * |------+------+------+------+------+------|       |                |       |------+------+------+------+------+------|
- * |      |  F11 |  F12 |      |      |      |-------|                |-------|      |      |      |      |      |      |
+ * |      |  F6  |  F7  |  F8  |  F9  |  F10 |                                |      |      |      |      |      |      |
+ * |------+------+------+------+------+------|                                |------+------+------+------+------+------|
+ * |      |      |      |  F11 |  F12 |      |-------.                ,-------|      |      |      |      |      |      |
+ * |------+------+------+------+------+------| Zoom0 |                |       |------+------+------+------+------+------|
+ * |      |      |      |      |      |      |-------|                |-------|      |      |      |      |      |      |
  * `-----------------------------------------/       /                \      \-----------------------------------------'
  *                       |      |      |      |      |      |    |      |UPPER |      |      |      |
  *                       `----------------------------------'    '------''---------------------------'
  */
     [_UPPER] = LAYOUT(
-        KC_TRNS,  KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS,                                     KC_TRNS, KC_TRNS, KC_TRNS,  KC_TRNS, KC_TRNS, KC_TRNS,
         KC_TRNS,  KC_F1,   KC_F2,   KC_F3,   KC_F4,   KC_F5,                                       KC_TRNS, KC_TRNS, KC_TRNS,  KC_TRNS, KC_TRNS, KC_TRNS,
         KC_TRNS,  KC_F6,   KC_F7,   KC_F8,   KC_F9,   KC_F10,                                      KC_TRNS, KC_TRNS, KC_TRNS,  KC_TRNS, KC_TRNS, KC_TRNS,
-        KC_TRNS,  KC_F11,  KC_F12,  KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS,          KC_TRNS,           KC_TRNS, KC_TRNS, KC_TRNS,  KC_TRNS, KC_TRNS, KC_TRNS,
+        KC_TRNS,  KC_TRNS, KC_TRNS, KC_F11,  KC_F12,  KC_TRNS,                                     KC_TRNS, KC_TRNS, KC_TRNS,  KC_TRNS, KC_TRNS, KC_TRNS,
+        KC_TRNS,  KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, G(KC_0),          KC_TRNS,           KC_TRNS, KC_TRNS, KC_TRNS,  KC_TRNS, KC_TRNS, KC_TRNS,
                                     KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS,  KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS
     ),
 
@@ -375,26 +377,28 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
  * Flag-/Flag+ keys were dropped: all 58 LEDs carry the same keylight flag,
  * so cycling flags was just a four-step version of RGBTog). Row 2 carries
  * the macOS F-row functions that have no knob position, on the same columns
- * their F-key counterparts occupy on _UPPER (W/E/R = F3/F4/F5): Mission
- * Control, Spotlight (Cmd+Space), Dictation. (That column alignment is
- * historical: _UPPER's F-keys have since moved to a left-hand block.)
+ * their F-key counterparts occupied on _UPPER (W/R = F3/F5): Mission
+ * Control, Dictation. (That column alignment is historical: _UPPER's
+ * F-keys have since moved to a left-hand block. Spotlight sat on E between
+ * them and was dropped as a duplicate of Cmd+Space, i.e. D held + Space.)
  * Dictation and Do Not Disturb
  * have no HID usage QMK can send (Apple uses a vendor page), so they're
  * chords that must be bound once in System Settings: Ctrl+Opt+Cmd+D for
  * Keyboard > Dictation > Shortcut, Ctrl+Opt+Cmd+N for Keyboard Shortcuts >
  * Mission Control > "Turn Do Not Disturb On/Off". The knobs here are media,
- * not RGB, and both on the right knob (placed there as a free-hand reach
- * back when Adjust was a left-thumb hold; with Adjust now on the right
- * pinky they're a same-hand reach): click = Do Not Disturb (F6), turn =
- * previous/next track (F7/F9). Left click stays transparent (Mute).
+ * not RGB, and both on the left knob so they're a free-hand reach while the
+ * right pinky holds Adjust (they followed the Adjust key across: right knob
+ * while Adjust was a left-thumb hold, left knob now): click = Do Not
+ * Disturb (F6), turn = previous/next track (F7/F9). Right click stays
+ * transparent (Play).
  * Blank cells are transparent (same key as _BASE).
  * ,-----------------------------------------------------.                    ,-----------------------------------------------------.
  * |RGBTog|Mode- |Mode+ | Hue- | Hue+ |      |                                | Sat- | Sat+ | Bri- | Bri+ | Spd- | Spd+ |
  * |------+------+------+------+------+------|                                |------+------+------+------+------+------|
- * |      |      |MCtrl |Spotl | Dict |      |                                |      |      |      |      |      |      |
+ * |      |      |MCtrl |      | Dict |      |                                |      |      |      |      |      |      |
  * |------+------+------+------+------+------|                                |------+------+------+------+------+------|
  * |      |      |      |      |      |      |-------.                ,-------|      |      |      |      |      |      |
- * |------+------+------+------+------+------|       |                |  DND  |------+------+------+------+------+------|
+ * |------+------+------+------+------+------|  DND  |                |       |------+------+------+------+------+------|
  * |      |      |      |      |      |      |-------|                |-------|      |      |      |      |      |      |
  * `-----------------------------------------/       /                \      \-----------------------------------------'
  *                       |      |      |      |      |      |    |      |      |      |      |      |
@@ -402,21 +406,25 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
  */
     [_ADJUST] = LAYOUT(
         RM_TOGG,  RM_PREV, RM_NEXT, RM_HUED,   RM_HUEU,    KC_TRNS,                                     RM_SATD, RM_SATU, RM_VALD,  RM_VALU, RM_SPDD, RM_SPDU,
-        KC_TRNS,  KC_TRNS, KC_MCTL, G(KC_SPC), LCAG(KC_D), KC_TRNS,                                     KC_TRNS, KC_TRNS, KC_TRNS,  KC_TRNS, KC_TRNS, KC_TRNS,
+        KC_TRNS,  KC_TRNS, KC_MCTL, KC_TRNS,   LCAG(KC_D), KC_TRNS,                                     KC_TRNS, KC_TRNS, KC_TRNS,  KC_TRNS, KC_TRNS, KC_TRNS,
         KC_TRNS,  KC_TRNS, KC_TRNS, KC_TRNS,   KC_TRNS,    KC_TRNS,                                     KC_TRNS, KC_TRNS, KC_TRNS,  KC_TRNS, KC_TRNS, KC_TRNS,
-        KC_TRNS,  KC_TRNS, KC_TRNS, KC_TRNS,   KC_TRNS,    KC_TRNS, KC_TRNS,          LCAG(KC_N),        KC_TRNS, KC_TRNS, KC_TRNS,  KC_TRNS, KC_TRNS, KC_TRNS,
+        KC_TRNS,  KC_TRNS, KC_TRNS, KC_TRNS,   KC_TRNS,    KC_TRNS, LCAG(KC_N),       KC_TRNS,           KC_TRNS, KC_TRNS, KC_TRNS,  KC_TRNS, KC_TRNS, KC_TRNS,
                                     KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS,  KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS
     ),
 };
 
 #if defined(ENCODER_MAP_ENABLE)
 const uint16_t PROGMEM encoder_map[][NUM_ENCODERS][NUM_DIRECTIONS] = {
-    // Knobs mirror the Magic Keyboard F-row: left = brightness (F1/F2, sent
-    // as F14/F15, which macOS maps to brightness down/up), right = volume
-    // (F11/F12) on _BASE; right = previous/next track (F7/F9) on _ADJUST.
-    [_BASE]   = { ENCODER_CCW_CW(KC_F14, KC_F15),   ENCODER_CCW_CW(KC_VOLD, KC_VOLU) },
-    [_LOWER]  = { ENCODER_CCW_CW(KC_TRNS, KC_TRNS), ENCODER_CCW_CW(KC_TRNS, KC_TRNS) },
-    [_UPPER]  = { ENCODER_CCW_CW(KC_TRNS, KC_TRNS), ENCODER_CCW_CW(KC_TRNS, KC_TRNS) },
-    [_ADJUST] = { ENCODER_CCW_CW(KC_TRNS, KC_TRNS), ENCODER_CCW_CW(KC_MPRV, KC_MNXT) },
+    // _BASE mirrors the Magic Keyboard F-row: left = brightness (F1/F2,
+    // sent as F14/F15, which macOS maps to brightness down/up), right =
+    // volume (F11/F12). On the layers, each knob job sits on the knob
+    // opposite the hand holding the layer: _LOWER (left thumb) right knob =
+    // word jump (Option+Left/Right); _UPPER (right thumb) left knob = zoom
+    // (Cmd+-/Cmd+=, click Cmd+0); _ADJUST (right pinky) left knob =
+    // previous/next track (F7/F9), click Do Not Disturb.
+    [_BASE]   = { ENCODER_CCW_CW(KC_F14, KC_F15),     ENCODER_CCW_CW(KC_VOLD, KC_VOLU) },
+    [_LOWER]  = { ENCODER_CCW_CW(KC_TRNS, KC_TRNS),   ENCODER_CCW_CW(A(KC_LEFT), A(KC_RIGHT)) },
+    [_UPPER]  = { ENCODER_CCW_CW(G(KC_MINS), G(KC_EQL)), ENCODER_CCW_CW(KC_TRNS, KC_TRNS) },
+    [_ADJUST] = { ENCODER_CCW_CW(KC_MPRV, KC_MNXT),   ENCODER_CCW_CW(KC_TRNS, KC_TRNS) },
 };
 #endif
