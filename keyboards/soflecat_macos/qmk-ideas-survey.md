@@ -39,10 +39,9 @@ Ranked by value against effort, respecting earlier decisions.
    D+Z) so left-hand copy/paste works without reaching for K. Choose carefully:
    D+A would turn a fast "da" into Select All.
 7. **Idle RGB profile and OLED fade** (`keyboards/nifty_numpad/nifty_numpad.c`,
-   `OLED_FADE_OUT`, `RGB_MATRIX_TIMEOUT`) — **done** in the simple form:
-   `RGB_MATRIX_TIMEOUT 60000` (LEDs off after a minute) and `OLED_FADE_OUT`
-   in `config.h`. The nifty_numpad two-profile "dim instead of off" variant
-   (~60 lines) was not needed.
+   `OLED_FADE_OUT`, `RGB_MATRIX_TIMEOUT`) — **done for the OLEDs only**:
+   `OLED_FADE_OUT` in `config.h`. `RGB_MATRIX_TIMEOUT` was tried and removed;
+   the user wants the lights to stay on when idle.
 8. **Quick tap term at zero for the home row** (`QUICK_TAP_TERM_PER_KEY`) —
    open. Tap-then-hold on F gives Shift instead of "fff". Keep the default on
    the Backspace key, which relies on repeat.
@@ -78,7 +77,10 @@ encoders) and how it fits here.
   (`keyboards/hotdox76v2`, `modules/qmk/split_data_sync`). The pattern for
   anything above that needs the other half to know master state.
 - Typing-reactive effects (heatmap, reactive, splash) are built in and need only
-  `RGB_MATRIX_KEYPRESSES` (+ `RGB_MATRIX_FRAMEBUFFER_EFFECTS` for the heatmap).
+  `RGB_MATRIX_KEYPRESSES` (+ `RGB_MATRIX_FRAMEBUFFER_EFFECTS` for the heatmap)
+  — **done**: all twelve reactive effects and `typing_heatmap` are enabled, with `SPLIT_TRANSPORT_MIRROR` so both halves
+  react. Added later: `RGB_MATRIX_SOLID_REACTIVE_GRADIENT_MODE`. A custom
+  per-key-hue `RAINBOW_REACTIVE` effect was tried and removed.
 
 Nothing in the tree has a WPM graph, a game, a host-fed clock, or encoder
 acceleration; those would be from scratch.
