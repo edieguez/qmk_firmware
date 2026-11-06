@@ -13,7 +13,9 @@ Status markers: **done** = implemented on this board, **open** = not done.
 
 Ranked by value against effort, respecting earlier decisions.
 
-1. **Speculative Hold** (`docs/tap_hold.md`) — open. The modifier is sent the
+1. **Speculative Hold** (`docs/tap_hold.md`) — **done** (`SPECULATIVE_HOLD`
+   + `SPECULATIVE_HOLD_FLOW_TERM 150` in `config.h`, `get_speculative_hold()`
+   in `keymap.c` for F/J/D/K). The modifier is sent the
    instant a home row mod goes down and withdrawn if it turns out to be a tap.
    Built-in fix for Cmd-click / Shift-click / Shift-select lag with home row
    mods. Config only, plus a short `get_speculative_hold()` to include D and K.
@@ -30,15 +32,17 @@ Ranked by value against effort, respecting earlier decisions.
    LOWER left knob or ADJUST right knob. Enabled by listing the module in a
    `keymap.json`, with one define to use Cmd instead of Alt.
 5. **Keylog that clears itself** (`keyboards/tominabox1/le_chiffre/le_chiffre.c`)
-   — open. Three lines wipe the typed-character log after 30 s idle. Closes
+   — **done** (`KEYLOG_CLEAR_MS` in `soflecat_macos.c`). Three lines wipe the typed-character log after 30 s idle. Closes
    most of the audit's password-on-OLED finding without removing the feature.
 6. **Per-chord Chordal Hold exceptions** (`docs/tap_hold.md`,
    `get_chordal_hold()`) — open. Allow a few same-hand chords (D+C, D+V, D+X,
    D+Z) so left-hand copy/paste works without reaching for K. Choose carefully:
    D+A would turn a fast "da" into Select All.
 7. **Idle RGB profile and OLED fade** (`keyboards/nifty_numpad/nifty_numpad.c`,
-   `OLED_FADE_OUT`, `RGB_MATRIX_TIMEOUT`) — open. Dim lighting after a minute,
-   fade the screens instead of cutting them. Cosmetic, cheap.
+   `OLED_FADE_OUT`, `RGB_MATRIX_TIMEOUT`) — **done** in the simple form:
+   `RGB_MATRIX_TIMEOUT 60000` (LEDs off after a minute) and `OLED_FADE_OUT`
+   in `config.h`. The nifty_numpad two-profile "dim instead of off" variant
+   (~60 lines) was not needed.
 8. **Quick tap term at zero for the home row** (`QUICK_TAP_TERM_PER_KEY`) —
    open. Tap-then-hold on F gives Shift instead of "fff". Keep the default on
    the Backspace key, which relies on repeat.

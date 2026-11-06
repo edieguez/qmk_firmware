@@ -117,7 +117,11 @@ static const char *rgb_status_message(void) {
 // so neither one reaches this log -- consistent with the rest of the keymap's
 // handling of those two features.
 #define KEYLOG_LEN 20
-static char keylog[KEYLOG_LEN + 1];
+// Wiped after this long with no new character, so a password's tail
+// doesn't sit on the screen until 20 more keys are typed.
+#define KEYLOG_CLEAR_MS 30000
+static char     keylog[KEYLOG_LEN + 1];
+static uint32_t keylog_written_at = 0;
 
 static char keycode_to_char(uint16_t keycode) {
     if (keycode >= KC_A && keycode <= KC_Z) {
@@ -190,6 +194,7 @@ static void update_keylog(uint16_t keycode, const keyrecord_t *record) {
     }
     memmove(keylog, keylog + 1, KEYLOG_LEN - 1);
     keylog[KEYLOG_LEN - 1] = c;
+    keylog_written_at      = timer_read32();
 }
 
 // process_rgb_matrix() consumes every RM_* keycode (returns false), which
@@ -391,6 +396,9 @@ static void render_status(void) {
     oled_set_cursor(0, 11);
     oled_write_P(PSTR("     "), false);
 
+    if (timer_elapsed32(keylog_written_at) > KEYLOG_CLEAR_MS) {
+        memset(keylog, ' ', KEYLOG_LEN);
+    }
     oled_set_cursor(0, 12);
     oled_write(keylog, false);
 }

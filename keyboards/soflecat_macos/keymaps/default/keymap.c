@@ -214,6 +214,22 @@ bool get_permissive_hold(uint16_t keycode, keyrecord_t *record) {
     }
 }
 
+// Speculative Hold (config.h) only for the Shift/GUI four -- the same set
+// Permissive Hold covers, and the ones used with the mouse (Shift-click,
+// Cmd-click). The default would also speculate the Ctrl keys (S/L); Ctrl
+// adds nothing here and Ctrl+click is right-click on macOS.
+bool get_speculative_hold(uint16_t keycode, keyrecord_t *record) {
+    switch (keycode) {
+        case LSFT_T(KC_F):
+        case RSFT_T(KC_J):
+        case LGUI_T(KC_D):
+        case RGUI_T(KC_K):
+            return true;
+        default:
+            return false;
+    }
+}
+
 // Shift+Esc sends ~, replacing Grave Escape (QK_GESC), whose built-in
 // GUI-held case is broken on macOS: Cmd+Esc there sends Cmd+` (grave),
 // which macOS intercepts as "move focus to next window" instead of
