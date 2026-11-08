@@ -15,66 +15,41 @@
  */
 #pragma once
 
-// Custom font adds icon glyphs (layer state, GUI/Alt/Ctrl/Shift mod status)
-// at codepoints 0x80+ on top of the stock glyph table, for render_status()'s
-// icon-based master-half OLED display -- see lib/glcdfont.c.
+// Stock font plus the layer and modifier icons at 0x80+.
 #ifdef OLED_ENABLE
 #    define OLED_FONT_H "keyboards/soflecat_macos/keymaps/default/lib/glcdfont.c"
 #endif
 
-// Enabling this option changes the startup behavior to listen for an
-// active USB communication to delegate which part is master and which
-// is slave. With this option enabled and there's USB communication,
-// then that half assumes it is the master, otherwise it assumes it
-// is the slave.
-//
-// I've found this helps with some ProMicros where the slave does not boot
+// The half with USB traffic is the master. Helps ProMicros where the slave
+// doesn't boot.
 #define SPLIT_USB_DETECT
-
-// SPLIT_USB_DETECT only knows "master" once USB fully enumerates -- a
-// power-only cable (no data lines) never gets there, so both halves time
-// out and both decide they're the slave, permanently (bongocat on both
-// OLEDs, no keys/RGB) until a manual power cycle. This reboots any half
-// stuck as "slave" that hasn't heard from a master, so it retries
-// detection on its own once a real data connection shows up.
+// With a power-only cable both halves decide they're the slave and stay
+// that way. This reboots a slave that never hears from a master.
 #define SPLIT_WATCHDOG_ENABLE
 
-#define SPLIT_WPM_ENABLE     // sync WPM from master to the slave half for the bongocat OLED
-#define SPLIT_ACTIVITY_ENABLE // sync matrix activity timestamps so the slave's OLED (bongocat) doesn't sleep mid-typing when it's only seeing keypresses from the other half
-#define SPLIT_OLED_ENABLE // mirror the master's actual on/off state to the slave, so both OLEDs blank/wake together instead of each half computing its own timeout independently
-#define SPLIT_LAYER_STATE_ENABLE // the slave runs its own rgb_matrix_indicators hook; it needs the layer state to light its 29 LEDs for the active-layer overlay in keymap.c
-// The reactive RGB effects and typing_heatmap (keyboard.json) need key
-// events fed to the matrix, and the half without USB only sees the other
-// half's presses with the transport mirror on.
-#define RGB_MATRIX_KEYPRESSES
-#define RGB_MATRIX_FRAMEBUFFER_EFFECTS // typing_heatmap keeps a per-key heat buffer
-#define SPLIT_TRANSPORT_MIRROR
-// The solid_reactive effects take their flash hue from the clock instead of
-// the fixed user hue, so colors drift through the wheel over time (speed
-// keys set the rate).
-#define RGB_MATRIX_SOLID_REACTIVE_GRADIENT_MODE
-#define RGB_MATRIX_MODE_NAME_ENABLE // enables rgb_matrix_get_mode_name() for the OLED status message
-#define RGB_MATRIX_SLEEP     // turn off effects when suspended
-#define OLED_FADE_OUT            // OLEDs fade at the timeout instead of cutting to black
-#define OLED_FADE_OUT_INTERVAL 5 // 0-15, larger is slower
-#define RGB_MATRIX_MAXIMUM_BRIGHTNESS 100  // limits maximum brightness of LEDs (max 255). Higher may cause the controller to crash.
+#define SPLIT_WPM_ENABLE         // bongocat speed on the slave
+#define SPLIT_ACTIVITY_ENABLE    // keeps the slave OLED awake while typing on the master
+#define SPLIT_OLED_ENABLE        // both OLEDs sleep and wake together
+#define SPLIT_LAYER_STATE_ENABLE // the slave lights its own LEDs for the layer overlay
+#define RGB_MATRIX_KEYPRESSES    // reactive effects
+#define RGB_MATRIX_FRAMEBUFFER_EFFECTS // typing heatmap
+#define SPLIT_TRANSPORT_MIRROR   // so the slave sees the master's presses for the reactive effects
+#define RGB_MATRIX_SOLID_REACTIVE_GRADIENT_MODE // reactive flash hue drifts over time
+#define RGB_MATRIX_MODE_NAME_ENABLE // mode name on the OLED
+#define RGB_MATRIX_SLEEP
+#define OLED_FADE_OUT
+#define OLED_FADE_OUT_INTERVAL 5
+#define RGB_MATRIX_MAXIMUM_BRIGHTNESS 100 // higher can brown out the controller
 
-// Home row mods (A/S/D/F, J/K/L/;): reduce accidental modifier triggers
-// during fast/rolled typing. See docs/tap_hold.md "Configuring Home Row Mods".
+// Home row mods. See keymap.c for the per-key exceptions.
 #define TAPPING_TERM 200
 #define PERMISSIVE_HOLD
-#define PERMISSIVE_HOLD_PER_KEY // only Shift/GUI keep it -- see get_permissive_hold() in keymap.c
+#define PERMISSIVE_HOLD_PER_KEY
 #define CHORDAL_HOLD
 #define FLOW_TAP_TERM 150
-// Required for get_tapping_term() in keymap.c to actually be consulted --
-// see docs/tap_hold.md "Per Key Tapping Term".
 #define TAPPING_TERM_PER_KEY
-// Speculative Hold: press the modifier the instant a mod-tap goes down and
-// take it back if the key turns out to be a tap. Makes Shift/Cmd+click and
-// Shift-select with the mouse instant instead of waiting for the tap-hold
-// decision. Which keys get it is decided by get_speculative_hold() in
-// keymap.c (the Shift/GUI four). The flow term keeps it off within 150ms of
-// the previous key, so ordinary fast typing doesn't send "flashing"
-// lone-modifier presses; macOS binds nothing to a lone Shift/Cmd anyway.
+// Send the modifier on keydown and take it back if the key turns out to be
+// a tap. Makes Shift/Cmd+click instant. Off within 150 ms of the previous
+// key so fast typing doesn't flash lone modifiers.
 #define SPECULATIVE_HOLD
 #define SPECULATIVE_HOLD_FLOW_TERM 150
