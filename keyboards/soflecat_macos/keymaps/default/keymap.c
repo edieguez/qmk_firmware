@@ -437,8 +437,10 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
 // KC_TRNS = 1), so the layer-hold key itself stays dark: it's transparent on
 // its own layer. Each half runs this hook for its own LED range only, which
 // is why config.h sets SPLIT_LAYER_STATE_ENABLE -- without it the slave half
-// never learns the layer changed. To let the running effect show through on
-// the unused keys instead of black, drop the else branch.
+// never learns the layer changed. _ADJUST is the exception to the blackout:
+// its keys adjust the RGB effect itself, so the unused keys keep showing the
+// running effect (otherwise you can't see the hue or mode you're setting)
+// while the orange marks still show where the controls are.
 bool rgb_matrix_indicators_advanced_user(uint8_t led_min, uint8_t led_max) {
     uint8_t layer = get_highest_layer(layer_state);
     if (layer == _BASE) {
@@ -461,7 +463,7 @@ bool rgb_matrix_indicators_advanced_user(uint8_t led_min, uint8_t led_max) {
             }
             if (keymap_key_to_keycode(layer, (keypos_t){col, row}) > KC_TRNS) {
                 rgb_matrix_set_color(index, on.r, on.g, on.b);
-            } else {
+            } else if (layer != _ADJUST) {
                 rgb_matrix_set_color(index, 0, 0, 0);
             }
         }
