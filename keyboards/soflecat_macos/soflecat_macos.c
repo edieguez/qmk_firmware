@@ -27,16 +27,12 @@
 
 static char     rgb_status[OLED_STATUS_BUF_LEN] = "";
 static uint32_t rgb_status_shown_until = 0;
-// Bumped on every new message so render_status() knows to clear the screen:
-// oled_write() only overwrites the cells it draws, and a shorter mode name
-// would otherwise leave the tail of the previous one on screen.
+// Bumped per message. oled_write() only touches the cells it draws, so
+// render_status() clears the screen when this changes.
 static uint8_t  rgb_status_version = 0;
 
-// RM_SATU/RM_SATD, RM_VALU/RM_VALD, and RM_SPDU/RM_SPDD are no-ops once
-// their property is already maxed/minned out (they use saturating math,
-// unlike hue, which wraps around), so the change-based detection
-// below never fires for them at the limit. Set by process_record_kb(),
-// consumed and cleared by the next poll below.
+// Sat/val/speed stop changing at their limits, so the diff below misses
+// those presses. process_record_kb() flags them.
 static bool sat_key_pressed   = false;
 static bool val_key_pressed   = false;
 static bool speed_key_pressed = false;
@@ -47,10 +43,7 @@ static void show_rgb_status(const char *label, uint8_t value) {
     rgb_status_version++;
 }
 
-// Watches for RGB property changes (toggle/mode/hue/sat/brightness/speed),
-// however they were made -- encoder or key -- and records whichever
-// one changed most recently into rgb_status, for rgb_status_message() to
-// show for a few seconds.
+// Show whichever RGB setting changed last, briefly, whether by key or knob.
 static void poll_rgb_status(void) {
     static bool     initialized  = false;
     static bool     last_enabled = true;
@@ -67,10 +60,7 @@ static void poll_rgb_status(void) {
     uint8_t val     = rgb_matrix_get_val();
     uint8_t speed   = rgb_matrix_get_speed();
 
-    // Seed the baseline from real state on the first poll instead of diffing
-    // against the hardcoded initializers above -- otherwise the persisted
-    // RGB state almost never matches those defaults and this flashes a
-    // bogus status message on every boot.
+    // The first call only seeds the baseline, or boot flashes a bogus message.
     if (!initialized) {
         initialized = true;
     } else if (enabled != last_enabled) {
@@ -102,9 +92,7 @@ static void poll_rgb_status(void) {
     speed_key_pressed = false;
 }
 
-// Returns the current RGB status message while it's still within its
-// display window -- or NULL once expired, so the caller falls back to the
-// normal layer/caps display.
+// NULL once the message has expired.
 static const char *rgb_status_message(void) {
     poll_rgb_status();
     if (timer_expired32(timer_read32(), rgb_status_shown_until)) {
@@ -115,17 +103,10 @@ static const char *rgb_status_message(void) {
 
 #endif
 
-// Rolling log of recently typed characters, shown on the master OLED's last
-// row. Only keys with an obvious single-character representation are logged
-// (letters, digits, space, and the punctuation keys reachable on _BASE);
-// modifiers, layer keys, and navigation/function keys are silently skipped.
-// Tap dance's second tap and key-override replacements bypass process_record
-// entirely (see the TD_CAPS comment above and quantum/process_key_override.c),
-// so neither one reaches this log -- consistent with the rest of the keymap's
-// handling of those two features.
+// Last 20 typed characters, bottom of the master OLED. Only keys with an
+// obvious single character are logged. Cleared after 30 s idle so a
+// password doesn't linger.
 #define KEYLOG_LEN 20
-// Wiped after this long with no new character, so a password's tail
-// doesn't sit on the screen until 20 more keys are typed.
 #define KEYLOG_CLEAR_MS 30000
 static char     keylog[KEYLOG_LEN + 1];
 static uint32_t keylog_written_at = 0;
@@ -175,20 +156,14 @@ static void update_keylog(uint16_t keycode, const keyrecord_t *record) {
         initialized         = true;
     }
 
-    // The home row mods' keycode as stored in the keymap is the whole
-    // MT(mod, kc) value, not the plain letter -- process_record_kb/
-    // post_process_record_kb always see this raw keymap value, regardless of
-    // whether the tap-hold system resolved this press as a tap or a hold.
-    // record->tap.count is 0 for a hold (only the modifier fired, no
-    // character was sent) and nonzero for a tap, so only unwrap and log the
-    // letter in the tap case.
+    // Mod-tap and layer-tap keycodes arrive raw. Log the tap keycode, and
+    // only when it was a tap.
     if (IS_QK_MOD_TAP(keycode)) {
         if (record->tap.count == 0) {
             return;
         }
         keycode = QK_MOD_TAP_GET_TAP_KEYCODE(keycode);
     } else if (IS_QK_LAYER_TAP(keycode)) {
-        // Same for the layer-tap keys (] on tap at [8,0], Backspace at [9,3]).
         if (record->tap.count == 0) {
             return;
         }
@@ -204,9 +179,8 @@ static void update_keylog(uint16_t keycode, const keyrecord_t *record) {
     keylog_written_at      = timer_read32();
 }
 
-// process_rgb_matrix() consumes every RM_* keycode (returns false), which
-// makes process_record() skip post_process_record_kb() for them -- so the
-// flagging has to happen here, in the earlier hook that still sees them.
+// process_rgb_matrix() consumes RM_* keys, so post_process_record_kb()
+// never sees them.
 bool process_record_kb(uint16_t keycode, keyrecord_t *record) {
 #ifdef RGB_MATRIX_ENABLE
     if (record->event.pressed) {
@@ -236,20 +210,10 @@ void post_process_record_kb(uint16_t keycode, keyrecord_t *record) {
     post_process_record_user(keycode, record);
 }
 
-// Icon glyphs (layer-state block, GUI/Alt/Ctrl/Shift mod-status pairs, bleed
-// fillers between them) come from lib/glcdfont.c, codepoints 0x80+, reused
-// verbatim from keyboards/splitkb/aurora/sofle_v2 -- see that board's
-// render_layer_state()/render_mod_status_gui_alt()/render_mod_status_ctrl_shift()
-// for the original. Each writes a fixed number of 5-character rows, matching
-// this board's master-half portrait grid (OLED_ROTATION_270, 5 cols x 16 rows)
-// exactly, so render_status() below can lay them out by row range with no
-// extra padding logic.
+// Icon glyphs are at 0x80+ in lib/glcdfont.c, taken from
+// splitkb/aurora/sofle_v2. The master OLED is portrait, 5 columns x 16 rows.
 
-// 3 rows x 5 cols. Layer numbers match `enum layers` in
-// keymaps/default/keymap.c (_BASE, _LOWER, _UPPER, _ADJUST) -- keep in sync
-// if layers are added/reordered. Aurora's 4 layer-icon shapes (default/
-// lower/raise/adjust) don't have a semantic equivalence to this keymap's
-// layers, they're just reused 1:1 in enum order as a visual proxy.
+// Layer numbers follow enum layers in keymap.c.
 static void render_layer_icon(uint8_t layer) {
     static const char PROGMEM base_layer[]   = {0x20, 0x94, 0x95, 0x96, 0x20, 0x20, 0xb4, 0xb5, 0xb6, 0x20, 0x20, 0xd4, 0xd5, 0xd6, 0x20, 0};
     static const char PROGMEM lower_layer[]  = {0x20, 0x9a, 0x9b, 0x9c, 0x20, 0x20, 0xba, 0xbb, 0xbc, 0x20, 0x20, 0xda, 0xdb, 0xdc, 0x20, 0};
@@ -271,9 +235,7 @@ static void render_layer_icon(uint8_t layer) {
     }
 }
 
-// 2 rows x 5 cols. `modifiers` should be get_mods()|get_oneshot_mods()|
-// get_speculative_mods() so a held mod, a one-shot mod and a Speculative
-// Hold mod (already sent to the host, not yet settled) all show as "on".
+// `modifiers` is get_mods() | get_oneshot_mods() | get_speculative_mods().
 static void render_mod_icons_gui_alt(uint8_t modifiers) {
     static const char PROGMEM gui_off_1[] = {0x85, 0x86, 0};
     static const char PROGMEM gui_off_2[] = {0xa5, 0xa6, 0};
@@ -285,8 +247,7 @@ static void render_mod_icons_gui_alt(uint8_t modifiers) {
     static const char PROGMEM alt_on_1[]  = {0x8f, 0x90, 0};
     static const char PROGMEM alt_on_2[]  = {0xaf, 0xb0, 0};
 
-    // Fillers between the modifier icons bleed into the icon frames, so the
-    // pair reads as one continuous shape rather than two disjoint icons.
+    // Fillers between the two icons so the pair reads as one shape.
     static const char PROGMEM off_off_1[] = {0xc5, 0};
     static const char PROGMEM off_off_2[] = {0xc6, 0};
     static const char PROGMEM on_off_1[]  = {0xc7, 0};
@@ -308,7 +269,6 @@ static void render_mod_icons_gui_alt(uint8_t modifiers) {
     oled_write_P(alt ? alt_on_2 : alt_off_2, false);
 }
 
-// 2 rows x 5 cols. Same bleed-filler technique as render_mod_icons_gui_alt().
 static void render_mod_icons_ctrl_shift(uint8_t modifiers) {
     static const char PROGMEM ctrl_off_1[] = {0x89, 0x8a, 0};
     static const char PROGMEM ctrl_off_2[] = {0xa9, 0xaa, 0};
@@ -341,29 +301,17 @@ static void render_mod_icons_ctrl_shift(uint8_t modifiers) {
     oled_write_P(shift ? shift_on_2 : shift_off_2, false);
 }
 
-// Portrait layout (OLED_ROTATION_270, 5 cols x 16 rows):
-//   rows  0-2   layer icon
-//   row   3     spacer
-//   rows  4-5   GUI | Alt icon pair
-//   rows  6-7   Ctrl | Shift icon pair
-//   row   8     spacer
-//   row   9     "CAPS" bar (full-row invert when caps_lock active)
-//   row   10    "WORD" bar (full-row invert when caps word active)
-//   row   11    spacer
-//   rows  12-15 rolling keylog (20 chars, auto-wraps across exactly 4 rows)
+// Rows: 0-2 layer icon, 4-5 GUI/Alt, 6-7 Ctrl/Shift, 9 CAPS, 10 WORD,
+// 12-15 keylog. 3, 8 and 11 are spacers.
 static void render_status(void) {
     const char *rgb_message = NULL;
 #ifdef RGB_MATRIX_ENABLE
     rgb_message = rgb_status_message();
 #endif
 
-    // oled_write*() only overwrites the character cells it draws into, so
-    // switching between an RGB message overlay and the normal status
-    // display leaves stale characters behind unless the display is cleared
-    // first. Every row below always writes its full fixed-width footprint,
-    // so the RGB-message-vs-normal-mode switch and a change of message
-    // text are the only content-shape changes left to guard against (no
-    // per-row tracking needed).
+    // oled_write() leaves cells it doesn't draw alone, so clear when switching
+    // between the RGB message and the status screen, and when the message
+    // text changes.
     static bool    last_was_rgb_message = false;
     static uint8_t drawn_rgb_version    = 0;
     bool           is_rgb_message       = rgb_message != NULL;
@@ -376,8 +324,6 @@ static void render_status(void) {
 
     if (rgb_message != NULL) {
 #ifdef RGB_MATRIX_ENABLE
-        // A new message replacing one still on screen (stepping through
-        // modes) also needs the clear, or the two names overlap.
         if (drawn_rgb_version != rgb_status_version) {
             oled_clear();
             drawn_rgb_version = rgb_status_version;
@@ -420,10 +366,7 @@ static void render_status(void) {
 
 oled_rotation_t oled_init_kb(oled_rotation_t rotation) {
     if (is_keyboard_master()) {
-        // OLED_ROTATION_0 was sideways and OLED_ROTATION_90 came out
-        // upside-down for this half's physical mounting -- confirmed by
-        // flashing both. 270 is the one that reads right-side up.
-        return OLED_ROTATION_270;
+        return OLED_ROTATION_270; // right side up for how the master screen is mounted
     }
     return OLED_ROTATION_180;
 }
@@ -448,28 +391,11 @@ bool oled_task_kb(void) {
 
 #endif
 
-// If the USB link gets stuck in USB_SUSPENDED without ever receiving a
-// genuine bus-reset/resume (e.g. after a full computer restart -- see
-// config.h), QMK's suspend loop (chibios.c protocol_pre_task()) blocks
-// forever. Recover automatically instead of requiring a physical
-// unplug/replug: if we've been continuously suspended longer than this,
-// force a warm reboot (mcu_reset() = NVIC_SystemReset(), not the
-// bootloader) to force fresh USB re-enumeration.
-//
-// A genuine long sleep (e.g. overnight in clamshell mode) is ALSO
-// continuously suspended for way more than this timeout, so without a
-// guard this would otherwise fire every ~60s for the entire night --
-// each one a brief window where USB remote-wakeup has to be
-// renegotiated with the host before it works again. If an actual wake
-// attempt lands during one of those hundreds of windows, the host can
-// come up without remote wakeup armed, reproducing the exact "needs
-// unplug/replug" symptom this was meant to fix. stuck_suspend_recovered
-// is placed in a RAM section never zeroed on boot (same trick as
-// bootloader_magic in platforms/chibios/bootloaders/rp2040.c) so it
-// survives the mcu_reset() below and makes the recovery reset fire only
-// ONCE per stuck episode; suspend_wakeup_init_kb() clears it again on any
-// real wake so a future genuine stuck episode (e.g. another restart) can
-// still self-heal.
+// If USB stays suspended with no bus reset (it happens after a host
+// restart), QMK's suspend loop never exits and only a replug helps. After a
+// minute of suspend, reset the MCU once so it re-enumerates. The token lives
+// in RAM that isn't cleared on reset, so a long real sleep doesn't reset
+// every minute; a real wake clears it.
 #define STUCK_SUSPEND_TIMEOUT_MS 60000
 #define STUCK_SUSPEND_RECOVERED_TOKEN 0x5C0FFEE5
 

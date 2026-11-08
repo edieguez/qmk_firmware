@@ -32,7 +32,7 @@
 # define ANIM_FRAME_DURATION_MIN 100 // shortest animation duration in ms
 # define IDLE_FRAME_DURATION 300  // how long each frame lasts in ms
 # define ANIM_FRAME_RATIO 2.5 // how aggressively animation speeds up with wpm
-# define ANIM_SIZE 512  // bytes per frame: 128x32 display = 512, the initializers fill exactly that
+# define ANIM_SIZE 512  // bytes per frame on a 128x32 display
 
 static uint32_t curr_anim_duration = 0; // variable animation duration
 static uint32_t bongo_timer = 0;
@@ -357,10 +357,7 @@ void render_bongocat(void) {
     // variable animation duration. Don't want this value to get near zero as it'll bug out.
     curr_anim_duration = MAX(ANIM_FRAME_DURATION_MIN, ANIM_FRAME_DURATION_MAX - ANIM_FRAME_RATIO * get_current_wpm());
 
-    // On/off state itself is mirrored from the master via SPLIT_OLED_ENABLE
-    // (see config.h), so both halves blank/wake in lockstep instead of each
-    // side computing its own timeout independently -- this just skips
-    // pointless redraws while the mirrored state says the screen is off.
+    // The on/off state comes from the master (SPLIT_OLED_ENABLE); skip drawing while off.
     if (is_oled_on()) {
         uint32_t frame_duration = get_current_wpm() > ANIM_WPM_LOWER ? curr_anim_duration : IDLE_FRAME_DURATION;
         if (timer_elapsed32(bongo_timer) > frame_duration) {
