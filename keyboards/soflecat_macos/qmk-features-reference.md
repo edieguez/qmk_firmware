@@ -1,3 +1,5 @@
+> **Historical.** Written before the 2026 thumb-cluster redesign; its status notes (dead thumb keys, Mouse Keys, Esc on `[9,1]`) no longer match the board. For current status see `qmk-ideas-survey.md` and the `keymap.c` layer diagrams.
+
 # QMK Features & Special Keys Reference
 
 A survey of QMK's feature set, done while weighing what (if anything) to assign to `soflecat_macos`'s three thumb keys that started out permanently unassigned. Two are still dead (matrix `[4,1]`, `[4,2]`); the third of the original trio, `[9,0]`, now holds `_ADJUST` (moved there from `[9,1]`, which is the dead one instead now) — see the now-partially-resolved item in `CLAUDE.md`'s Review findings. Kept as a standalone reference for future keymap work, not just this one decision.
