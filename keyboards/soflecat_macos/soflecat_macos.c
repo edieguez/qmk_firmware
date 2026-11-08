@@ -271,10 +271,9 @@ static void render_layer_icon(uint8_t layer) {
     }
 }
 
-// 2 rows x 5 cols. `modifiers` should be get_mods()|get_oneshot_mods() so a
-// currently-held mod and a one-shot mod both show as "on" -- a currently-
-// held mod was previously invisible to this display entirely (only
-// get_oneshot_mods() was checked).
+// 2 rows x 5 cols. `modifiers` should be get_mods()|get_oneshot_mods()|
+// get_speculative_mods() so a held mod, a one-shot mod and a Speculative
+// Hold mod (already sent to the host, not yet settled) all show as "on".
 static void render_mod_icons_gui_alt(uint8_t modifiers) {
     static const char PROGMEM gui_off_1[] = {0x85, 0x86, 0};
     static const char PROGMEM gui_off_2[] = {0xa5, 0xa6, 0};
@@ -388,7 +387,7 @@ static void render_status(void) {
         return;
     }
 
-    uint8_t mods = get_mods() | get_oneshot_mods();
+    uint8_t mods = get_mods() | get_oneshot_mods() | get_speculative_mods();
 
     render_layer_icon(get_highest_layer(layer_state));
 
