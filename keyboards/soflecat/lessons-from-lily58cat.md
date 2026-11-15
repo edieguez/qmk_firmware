@@ -122,6 +122,40 @@ BASE today: │PgDn │PgUp │Globe│Lower│Space│ │Enter│Bs/Up│  =  
    ended up as Print Screen, Adjust, Lower, Space and Enter,
    Backspace/Upper, `=`, Super.
 
+## Roadmap
+
+9. **One layout that adapts to the computer** — planned, not started.
+   When plugged into a PC, the board uses the Linux layout; when plugged
+   into a Mac, the macOS layout. One firmware, no reflashing.
+   - **Detecting the computer:** QMK's OS detection (`OS_DETECTION_ENABLE`,
+     `detected_host_os()`) guesses the host from how it sets up the USB
+     connection. It's a heuristic: docks, hubs and KVM switches can fool it,
+     and it can answer "unsure". So there also has to be a manual override
+     key (on Adjust), remembered across power-off. Detection happens only on
+     the USB half; `SPLIT_DETECTED_OS_ENABLE` shares it with the other half.
+   - **What has to switch:** the same list as lily58cat's two keymaps. Their
+     `LILY58CAT_MACOS` block in `keyboards/lily58cat/keymaps/default/keymap.c`
+     is the reference:
+     - home row mods (Ctrl vs Cmd on D/K, with the tuning following them)
+     - word and line jumps, word delete
+     - Super vs Globe
+     - screen brightness keys (`KC_BRIU`/`KC_BRID` vs F15/F14)
+     - ñ ü ¿ ¡ (AltGr vs Option sequences)
+     - `` ` `` and `~` (symbol + space on Linux US International, plain on
+       macOS)
+     - the Caps Lock hold (macOS only)
+     - the Mac-only Adjust keys (Mission Control, Launchpad, Dictation, Do
+       Not Disturb)
+   - **Likely approach:** build both key sets into the firmware and choose at
+     runtime: separate base layers per OS (`default_layer_set()`) for the
+     layer keys, and a runtime check in `process_record_user()` for the
+     sequences. Flash isn't a concern on the RP2040.
+   - **Prerequisite:** the Sofle is macOS-only today. Its Linux side would
+     come from lily58cat's default keymap.
+   - **Lily58:** the same idea probably won't fit there. Only about 500–750 B
+     are free, and two key sets plus OS detection need more. It stays on two
+     firmwares (`-km default` / `-km macos`) unless something is cut.
+
 ## Not applicable here
 
 Recorded so they aren't re-investigated:
