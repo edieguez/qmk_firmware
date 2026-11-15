@@ -14,11 +14,11 @@ This board uses a Pro Micro-footprint RP2040 clone controller, not the AVR Pro M
 
 Make example for this keyboard (after setting up your build environment):
 
-    make soflecat_macos:default
+    make soflecat:default
 
 Flashing example for this keyboard:
 
-    make soflecat_macos:default:flash
+    make soflecat:default:flash
 
 Press reset button twice on the keyboard when asked.
 

@@ -2,7 +2,7 @@
 
 # QMK Features & Special Keys Reference
 
-A survey of QMK's feature set, done while weighing what (if anything) to assign to `soflecat_macos`'s three thumb keys that started out permanently unassigned. Two are still dead (matrix `[4,1]`, `[4,2]`); the third of the original trio, `[9,0]`, now holds `_ADJUST` (moved there from `[9,1]`, which is the dead one instead now) — see the now-partially-resolved item in `CLAUDE.md`'s Review findings. Kept as a standalone reference for future keymap work, not just this one decision.
+A survey of QMK's feature set, done while weighing what (if anything) to assign to `soflecat`'s three thumb keys that started out permanently unassigned. Two are still dead (matrix `[4,1]`, `[4,2]`); the third of the original trio, `[9,0]`, now holds `_ADJUST` (moved there from `[9,1]`, which is the dead one instead now) — see the now-partially-resolved item in `CLAUDE.md`'s Review findings. Kept as a standalone reference for future keymap work, not just this one decision.
 
 Sourced from `docs/features/` (49 feature docs) and the keycode ranges in `quantum/keycodes.h`, cross-checked against what this keyboard currently enables (`keyboard.json`, `keymaps/default/rules.mk`, `config.h`, `keymap.c`). This is a point-in-time snapshot — re-verify against those files before relying on it, since upstream QMK's feature set evolves.
 
@@ -16,7 +16,7 @@ Sourced from `docs/features/` (49 feature docs) and the keycode ranges in `quant
 | Caps Word | `rules.mk` (`CAPS_WORD_ENABLE`) | Reached via `TD_CAPS` single tap |
 | WPM | `rules.mk` (`WPM_ENABLE`), `config.h` (`SPLIT_WPM_ENABLE`) | Drives bongocat animation speed + OLED readout |
 | Encoders | `keyboard.json`, `rules.mk` (`ENCODER_MAP_ENABLE`) | Volume/brightness on `_BASE`, Hue/Speed on `_ADJUST` |
-| RGB Matrix | `keyboard.json`, `soflecat_macos.c` | Full per-key addressable RGB + OLED status feedback loop |
+| RGB Matrix | `keyboard.json`, `soflecat.c` | Full per-key addressable RGB + OLED status feedback loop |
 | Split transport | `config.h` | `SPLIT_USB_DETECT`, `SPLIT_WATCHDOG_ENABLE`, `SPLIT_ACTIVITY_ENABLE`, `SPLIT_TRANSPORT_MIRROR` |
 | Bootmagic | `keyboard.json` (`bootmagic: true`) | Also has a dedicated `QK_BOOT` key on `_ADJUST` |
 
