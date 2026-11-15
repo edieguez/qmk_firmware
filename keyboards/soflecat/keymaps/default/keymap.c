@@ -30,13 +30,31 @@ enum custom_keycodes {
     // macOS Globe key. QMK has no keycode for consumer usage 0x29D (KC_LNG1
     // is something else), so it's sent by hand below.
     MACOS_GLOBE = SAFE_RANGE,
+    ES_NTIL, // ñ and ü: Option dead key, then the letter
+    ES_UDIA,
 };
+
+#define ES_IQUE A(S(KC_SLSH)) // ¿
+#define ES_IEXL A(KC_1)       // ¡
 
 #define ADJ_RBRC LT(_ADJUST, KC_RBRC) // ] on tap, Adjust on hold
 // Backspace on tap, Upper on hold. Tap, then hold again to auto-repeat.
 // Kept out of get_permissive_hold(): a backspace rolled into the next
 // letter has to stay a tap.
 #define UPP_BSPC LT(_UPPER, KC_BSPC)
+
+// Option+N / Option+U is a dead key on macOS; the letter after it gets the
+// accent. Shift (or Caps Word, which never sees this key) only applies to
+// the letter, since Option+Shift+N is a different character.
+static void tap_mac_accent(uint16_t dead_key, uint8_t letter) {
+    uint8_t mods  = get_mods();
+    bool    upper = (mods | get_weak_mods()) & MOD_MASK_SHIFT || is_caps_word_on();
+    del_mods(MOD_MASK_SHIFT);
+    del_weak_mods(MOD_MASK_SHIFT);
+    tap_code16(dead_key);
+    tap_code16(upper ? S(letter) : letter);
+    set_mods(mods);
+}
 
 bool process_record_user(uint16_t keycode, keyrecord_t *record) {
     switch (keycode) {
@@ -45,6 +63,12 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
                 host_consumer_send(AC_NEXT_KEYBOARD_LAYOUT_SELECT);
             } else {
                 host_consumer_send(0);
+            }
+            return false;
+        case ES_NTIL:
+        case ES_UDIA:
+            if (record->event.pressed) {
+                tap_mac_accent(A(keycode == ES_NTIL ? KC_N : KC_U), keycode == ES_NTIL ? KC_N : KC_U);
             }
             return false;
         default:
@@ -188,7 +212,7 @@ const char chordal_hold_layout[MATRIX_ROWS][MATRIX_COLS] PROGMEM = LAYOUT(
 const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
 /*
  * BASE. Home row mods on A S D F and J K L ;. Lower is a thumb hold, Upper
- * is held Backspace, Adjust is held ]. Delete is Lower+N, backtick is
+ * is held Backspace, Adjust is held ]. Delete is Lower+M, backtick is
  * Option+' or Lower+Esc.
  * ,-----------------------------------------------------.                    ,-----------------------------------------------------.
  * | Esc  |   1  |   2  |   3  |   4  |   5  |                                |   6  |   7  |   8  |   9  |   0  |   -  |
@@ -213,23 +237,24 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
 /*
  * LOWER. Arrows with word/line/document jumps around them. Backspace sends
  * Option+Backspace, Enter sends Shift+Enter. The right knob jumps by word.
+ * ñ on N, ü on U, ¿ on /, ¡ on 1 (Option sequences); Delete on M.
  * ,-----------------------------------------------------.                    ,-----------------------------------------------------.
- * |   `  |      |      |      |      |      |                                |      |      |      |      |      |LnStrt|
+ * |   `  |   ¡  |      |      |      |      |                                |      |      |      |      |      |LnStrt|
  * |------+------+------+------+------+------|                                |------+------+------+------+------+------|
- * |      |      |      |      |      |      |                                | wLeft|      |      |wRight|      | LnEnd|
+ * |      |      |      |      |      |      |                                | wLeft|   ü  |      |wRight|      | LnEnd|
  * |------+------+------+------+------+------|                                |------+------+------+------+------+------|
  * |      |      |      |      |      |      |-------.                ,-------|  Left|  Down|   Up | Right|      |DocTop|
  * |------+------+------+------+------+------|       |                |       |------+------+------+------+------+------|
- * |      |      |      |      |      |      |-------|                |-------|  Del |      |      |      |      |DocEnd|
+ * |      |      |      |      |      |      |-------|                |-------|   ñ  |  Del |      |      |   ¿  |DocEnd|
  * `-----------------------------------------/       /                \      \-----------------------------------------'
  *                       |      |      |      |LOWER |      |    |Sft+Enter| wBspc|      |      |      |
  *                       `----------------------------------'              '------''---------------------------'
  */
     [_LOWER] = LAYOUT(
-        KC_GRV,   KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS,                                     KC_TRNS,    KC_TRNS, KC_TRNS,   KC_TRNS,     KC_TRNS,    G(KC_LEFT),
-        KC_TRNS,  KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS,                                     A(KC_LEFT), KC_TRNS, KC_TRNS,   A(KC_RIGHT), KC_TRNS,   G(KC_RIGHT),
+        KC_GRV,   ES_IEXL, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS,                                     KC_TRNS,    KC_TRNS, KC_TRNS,   KC_TRNS,     KC_TRNS,    G(KC_LEFT),
+        KC_TRNS,  KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS,                                     A(KC_LEFT), ES_UDIA, KC_TRNS,   A(KC_RIGHT), KC_TRNS,   G(KC_RIGHT),
         KC_TRNS,  KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS,                                     KC_LEFT,    KC_DOWN, KC_UP,     KC_RIGHT,    KC_TRNS,    G(KC_UP),
-        KC_TRNS,  KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS,          KC_TRNS,           KC_DEL,     KC_TRNS,    KC_TRNS, KC_TRNS,     KC_TRNS,   G(KC_DOWN),
+        KC_TRNS,  KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS,          KC_TRNS,           ES_NTIL,    KC_DEL,     KC_TRNS, KC_TRNS,     ES_IQUE,   G(KC_DOWN),
                                     KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, S(KC_ENTER),    A(KC_BSPC), KC_TRNS, KC_TRNS, KC_TRNS
     ),
 
