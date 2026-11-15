@@ -9,3 +9,6 @@ COMMAND_ENABLE = no
 TAP_DANCE_ENABLE = yes
 CAPS_WORD_ENABLE = yes
 
+WPM_ENABLE = yes
+
+SRC += lib/bongocat.c

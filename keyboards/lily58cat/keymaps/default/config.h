@@ -15,3 +15,10 @@
 #define SPECULATIVE_HOLD
 #define SPECULATIVE_HOLD_FLOW_TERM 150
 
+// Stock font plus the layer and modifier icons at 0x80+.
+#define OLED_FONT_H "keyboards/lily58cat/keymaps/default/lib/glcdfont.c"
+#define SPLIT_ACTIVITY_ENABLE // keeps the slave OLED awake while typing on the master
+#define SPLIT_OLED_ENABLE     // both OLEDs sleep and wake together
+#define SPLIT_WPM_ENABLE      // bongocat speed on the slave
+#define OLED_FADE_OUT
+#define OLED_FADE_OUT_INTERVAL 5
