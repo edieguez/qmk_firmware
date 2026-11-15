@@ -1,14 +1,2 @@
-# Size savers for the 28 KB ATmega32u4.
-MAGIC_ENABLE = no
-SPACE_CADET_ENABLE = no
-GRAVE_ESC_ENABLE = no
-MOUSEKEY_ENABLE = no
-CONSOLE_ENABLE = no
-COMMAND_ENABLE = no
-
+# Keymap-level feature: the Caps key is a tap dance (see keymap.c).
 TAP_DANCE_ENABLE = yes
-CAPS_WORD_ENABLE = yes
-
-WPM_ENABLE = yes
-
-SRC += lib/bongocat.c
