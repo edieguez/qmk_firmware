@@ -9,11 +9,23 @@
     "diode_direction": "COL2ROW",
     "features": {
         "bootmagic": true,
-        "extrakey": true
+        "extrakey": true,
+        "rgblight": true
     },
     "matrix_pins": {
         "cols": ["F6", "F7", "B1", "B3", "B2", "B6"],
         "rows": ["C6", "D7", "E6", "B4", "B5"]
+    },
+    "rgblight": {
+        "animations": {
+            "breathing": true,
+            "rainbow_mood": true,
+            "rainbow_swirl": true
+        },
+        "led_count": 12,
+        "max_brightness": 120,
+        "sleep": true,
+        "split_count": [6, 6]
     },
     "split": {
         "enabled": true,
@@ -25,6 +37,9 @@
         "device_version": "1.0.0",
         "pid": "0xEB2D",
         "vid": "0x04D8"
+    },
+    "ws2812": {
+        "pin": "D3"
     },
     "layouts": {
         "LAYOUT": {
