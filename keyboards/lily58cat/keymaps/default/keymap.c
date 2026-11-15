@@ -23,6 +23,7 @@ enum custom_keycodes {
 #define ES_NTIL RALT(KC_N)    // ñ
 #define ES_IQUE RALT(KC_SLSH) // ¿
 #define ES_IEXL RALT(KC_1)    // ¡
+#define ES_UDIA RALT(KC_Y)    // ü
 
 // Backspace on tap, Upper on hold. Tap, then hold again to auto-repeat.
 // Kept out of get_permissive_hold(): a backspace rolled into the next
@@ -78,6 +79,7 @@ bool caps_word_press_user(uint16_t keycode) {
             return true;
         case KC_A ... KC_Z:
         case ES_NTIL:
+        case ES_UDIA:
         case KC_MINS:
             add_weak_mods(MOD_BIT(KC_LSFT));
             return true;
@@ -203,11 +205,11 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
 /*
  * LOWER. Arrows on H J K L, word left and right above them, line start/end
  * and pages on the outer column. Backspace removes a word, Enter sends
- * Shift+Enter. ñ on N, ¿ on /, ¡ on 1.
+ * Shift+Enter. ñ on N, ü on U, ¿ on /, ¡ on 1.
  * ,-----------------------------------------.                    ,-----------------------------------------.
  * |   `  |   ¡  |      |      |      |      |                    |      |      |      |      |      | Home |
  * |------+------+------+------+------+------|                    |------+------+------+------+------+------|
- * |      |      |      |      |      |      |                    | wLeft|      |      |wRight|      | End  |
+ * |      |      |      |      |      |      |                    | wLeft|   ü  |      |wRight|      | End  |
  * |------+------+------+------+------+------|                    |------+------+------+------+------+------|
  * |      |      |      |      |      |      |-------.    ,-------| Left | Down |  Up  | Right|      | PgUp |
  * |------+------+------+------+------+------|       |    |       |------+------+------+------+------+------|
@@ -218,7 +220,7 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
  */
     [_LOWER] = LAYOUT(
         GRV_SPC, ES_IEXL, _______, _______, _______, _______,                       _______,    _______, _______, _______,    _______, KC_HOME,
-        _______, _______, _______, _______, _______, _______,                       C(KC_LEFT), _______, _______, C(KC_RGHT), _______, KC_END,
+        _______, _______, _______, _______, _______, _______,                       C(KC_LEFT), ES_UDIA, _______, C(KC_RGHT), _______, KC_END,
         _______, _______, _______, _______, _______, _______,                       KC_LEFT,    KC_DOWN, KC_UP,   KC_RGHT,    _______, KC_PGUP,
         _______, _______, _______, _______, _______, _______, _______,     _______, ES_NTIL,    _______, _______, _______,    ES_IQUE, KC_PGDN,
                                    _______, _______, _______, _______,     S(KC_ENT), C(KC_BSPC), _______, _______
