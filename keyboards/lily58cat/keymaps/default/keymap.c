@@ -15,30 +15,72 @@ enum {
 
 enum custom_keycodes {
     GRV_SPC = SAFE_RANGE, // ` on its own, see process_record_user()
+#ifdef LILY58CAT_MACOS
+    MAC_GLOBE, // consumer usage 0x29D, which QMK has no keycode for
+    ES_NTIL,   // ñ and ü: Option dead key, then the letter
+    ES_UDIA,
+#endif
 };
-
-// Spanish characters through AltGr, which US International maps them to.
-// Right Alt isn't on the keyboard any more (see HM_SCLN), so these keys
-// send it themselves. Shift gives Ñ.
-#define ES_NTIL RALT(KC_N)    // ñ
-#define ES_IQUE RALT(KC_SLSH) // ¿
-#define ES_IEXL RALT(KC_1)    // ¡
-#define ES_UDIA RALT(KC_Y)    // ü
 
 // Backspace on tap, Upper on hold. Tap, then hold again to auto-repeat.
 // Kept out of get_permissive_hold(): a backspace rolled into the next
 // letter has to stay a tap.
 #define UPP_BSPC LT(_UPPER, KC_BSPC)
 
-// Home row mods. Ctrl sits where Cmd was on the Mac, so Ctrl+C/V/Z use the
-// same fingers.
+// Everything that differs between the Linux keymap (default) and the macOS
+// one (keymaps/macos, which defines LILY58CAT_MACOS and includes this file).
+// The layer diagrams below show the Linux keys.
+#ifdef LILY58CAT_MACOS
+// Cmd sits where Ctrl is on Linux, so Cmd+C/V/Z use the same fingers.
+#    define HM_S LCTL_T(KC_S)
+#    define HM_D LGUI_T(KC_D)
+#    define HM_K RGUI_T(KC_K)
+#    define HM_L RCTL_T(KC_L)
+#    define OS_WORD_L A(KC_LEFT)
+#    define OS_WORD_R A(KC_RGHT)
+#    define OS_LINE_S G(KC_LEFT) // Home/End scroll the document on macOS
+#    define OS_LINE_E G(KC_RGHT)
+#    define OS_WORD_BSPC A(KC_BSPC)
+#    define OS_GRAVE KC_GRV // not a dead key on the U.S. layout
+#    define OS_SUPER MAC_GLOBE
+#    define OS_BRI_UP KC_F15 // what macOS treats as brightness keys
+#    define OS_BRI_DN KC_F14
+#    define OS_MCTL KC_MCTL
+#    define OS_LPAD KC_LPAD
+#    define OS_DICT LCAG(KC_D) // bind Dictation and Do Not Disturb to these
+#    define OS_DND LCAG(KC_N)  // chords in System Settings
+#    define ES_IQUE A(S(KC_SLSH)) // ¿
+#    define ES_IEXL A(KC_1)       // ¡
+#else
+// Ctrl sits where Cmd is on macOS, so Ctrl+C/V/Z use the same fingers.
+#    define HM_S LGUI_T(KC_S)
+#    define HM_D LCTL_T(KC_D)
+#    define HM_K RCTL_T(KC_K)
+#    define HM_L RGUI_T(KC_L)
+#    define OS_WORD_L C(KC_LEFT)
+#    define OS_WORD_R C(KC_RGHT)
+#    define OS_LINE_S KC_HOME
+#    define OS_LINE_E KC_END
+#    define OS_WORD_BSPC C(KC_BSPC)
+#    define OS_GRAVE GRV_SPC
+#    define OS_SUPER KC_LGUI
+#    define OS_BRI_UP KC_BRIU
+#    define OS_BRI_DN KC_BRID
+#    define OS_MCTL _______
+#    define OS_LPAD _______
+#    define OS_DICT _______
+#    define OS_DND _______
+// Spanish characters through AltGr, which US International maps them to.
+// Right Alt isn't on the keyboard any more (see HM_SCLN), so these keys
+// send it themselves. Shift gives Ñ.
+#    define ES_NTIL RALT(KC_N)    // ñ
+#    define ES_IQUE RALT(KC_SLSH) // ¿
+#    define ES_IEXL RALT(KC_1)    // ¡
+#    define ES_UDIA RALT(KC_Y)    // ü
+#endif
 #define HM_A LALT_T(KC_A)
-#define HM_S LGUI_T(KC_S)
-#define HM_D LCTL_T(KC_D)
 #define HM_F LSFT_T(KC_F)
 #define HM_J RSFT_T(KC_J)
-#define HM_K RCTL_T(KC_K)
-#define HM_L RGUI_T(KC_L)
 // Left Alt on the right hand too: Linux layouts treat Right Alt as AltGr, so
 // RAlt+Tab was a plain Tab.
 #define HM_SCLN LALT_T(KC_SCLN)
@@ -62,6 +104,9 @@ static void caps_dance_finished(tap_dance_state_t *state, void *user_data) {
 
 static void caps_dance_reset(tap_dance_state_t *state, void *user_data) {
     if (caps_dance_sent_capslock) {
+#ifdef LILY58CAT_MACOS
+        wait_ms(100); // macOS drops a Caps Lock press that releases too fast
+#endif
         unregister_code(KC_CAPS);
     }
 }
@@ -93,17 +138,35 @@ bool caps_word_press_user(uint16_t keycode) {
     }
 }
 
-// US International makes ` and ~ dead keys that wait for the next letter,
-// so these send the symbol followed by a space to get it on its own.
-//   Shift+Esc -> ~    Alt+' -> `    Lower+Esc -> `
-// Done here rather than with Key Overrides, which can't send two keys.
+// Shift+Esc -> ~    Alt+' -> `    Lower+Esc -> ` (Linux)
+// On Linux US International ` and ~ are dead keys that wait for the next
+// letter, so a space follows to get the symbol on its own. Done here rather
+// than with Key Overrides, which can't send two keys. Alt is lifted either
+// way (on macOS Option+' would be æ).
 static void tap_dead_key(uint16_t keycode) {
     uint8_t mods = get_mods();
     del_mods(MOD_MASK_ALT);
     tap_code16(keycode);
+#ifndef LILY58CAT_MACOS
     tap_code(KC_SPC);
+#endif
     set_mods(mods);
 }
+
+#ifdef LILY58CAT_MACOS
+// Option+N / Option+U is a dead key on macOS; the letter after it gets the
+// accent. Shift (or Caps Word, which never sees this key) only applies to
+// the letter, since Option+Shift+N is a different character.
+static void tap_mac_accent(uint16_t dead_key, uint8_t letter) {
+    uint8_t mods  = get_mods();
+    bool    upper = (mods | get_weak_mods()) & MOD_MASK_SHIFT || is_caps_word_on();
+    del_mods(MOD_MASK_SHIFT);
+    del_weak_mods(MOD_MASK_SHIFT);
+    tap_code16(dead_key);
+    tap_code16(upper ? S(letter) : letter);
+    set_mods(mods);
+}
+#endif
 
 bool process_record_user(uint16_t keycode, keyrecord_t *record) {
     // The press decides, and the release has to be swallowed with it.
@@ -133,38 +196,50 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
                 tap_dead_key(KC_GRV);
             }
             return false;
+#ifdef LILY58CAT_MACOS
+        case MAC_GLOBE:
+            host_consumer_send(record->event.pressed ? AC_NEXT_KEYBOARD_LAYOUT_SELECT : 0);
+            return false;
+        case ES_NTIL:
+        case ES_UDIA:
+            if (record->event.pressed) {
+                tap_mac_accent(A(keycode == ES_NTIL ? KC_N : KC_U), keycode == ES_NTIL ? KC_N : KC_U);
+            }
+            return false;
+#endif
         default:
             return true;
     }
 }
 
-// Shift and Ctrl (F J D K) get their own tap-hold tuning below.
-static bool is_shift_ctrl_hrm(uint16_t keycode) {
+// Shift and Ctrl (Cmd on macOS), on F J D K, get their own tap-hold tuning
+// below.
+static bool is_tuned_hrm(uint16_t keycode) {
     return keycode == HM_F || keycode == HM_J || keycode == HM_D || keycode == HM_K;
 }
 
 // Flow Tap would settle Shift/Ctrl as taps before Chordal Hold sees the next
 // key, which broke fast Shift+/ and Ctrl+V. The Alt/Super keys keep it.
 uint16_t get_flow_tap_term(uint16_t keycode, keyrecord_t *record, uint16_t prev_keycode) {
-    return !is_shift_ctrl_hrm(keycode) && is_flow_tap_key(keycode) && is_flow_tap_key(prev_keycode) ? FLOW_TAP_TERM : 0;
+    return !is_tuned_hrm(keycode) && is_flow_tap_key(keycode) && is_flow_tap_key(prev_keycode) ? FLOW_TAP_TERM : 0;
 }
 
 // Shift/Ctrl chords often have almost no key overlap at speed, so these four
 // get extra time for the chord to register. +80 wasn't enough. Hold On Other
 // Key Press fixed the misses but fired on plain bigrams ("fi" -> "I").
 uint16_t get_tapping_term(uint16_t keycode, keyrecord_t *record) {
-    return is_shift_ctrl_hrm(keycode) ? TAPPING_TERM + 150 : TAPPING_TERM;
+    return is_tuned_hrm(keycode) ? TAPPING_TERM + 150 : TAPPING_TERM;
 }
 
 // Shift/Ctrl only. With it on Alt/Super, bigrams rolled across hands settled
 // as held ("also" -> "aso").
 bool get_permissive_hold(uint16_t keycode, keyrecord_t *record) {
-    return is_shift_ctrl_hrm(keycode);
+    return is_tuned_hrm(keycode);
 }
 
 // Shift/Ctrl, so mouse chords (Shift-click, Ctrl-click) are instant.
 bool get_speculative_hold(uint16_t keycode, keyrecord_t *record) {
-    return is_shift_ctrl_hrm(keycode);
+    return is_tuned_hrm(keycode);
 }
 
 // Thumb and inner keys are exempt from the opposite-hands rule, or a home row
@@ -199,7 +274,7 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
         KC_TAB,      KC_Q,    KC_W,    KC_E,    KC_R,    KC_T,                          KC_Y,    KC_U,    KC_I,    KC_O,    KC_P,    KC_BSLS,
         TD(TD_CAPS), HM_A,    HM_S,    HM_D,    HM_F,    KC_G,                          KC_H,    HM_J,    HM_K,    HM_L,    HM_SCLN, KC_QUOT,
         KC_LBRC,     KC_Z,    KC_X,    KC_C,    KC_V,    KC_B,    KC_DEL,      KC_MPLY, KC_N,    KC_M,    KC_COMM, KC_DOT,  KC_SLSH, KC_RBRC,
-                         KC_PSCR, MO(_ADJUST), MO(_LOWER), KC_SPC,     KC_ENT,  UPP_BSPC, KC_EQL, KC_LGUI
+                         KC_PSCR, MO(_ADJUST), MO(_LOWER), KC_SPC,     KC_ENT,  UPP_BSPC, KC_EQL, OS_SUPER
     ),
 
 /*
@@ -219,11 +294,11 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
  *                   `----------------------------'         '------''--------------------'
  */
     [_LOWER] = LAYOUT(
-        GRV_SPC, ES_IEXL, _______, _______, _______, _______,                       _______,    _______, _______, _______,    _______, KC_HOME,
-        _______, _______, _______, _______, _______, _______,                       C(KC_LEFT), ES_UDIA, _______, C(KC_RGHT), _______, KC_END,
+        OS_GRAVE, ES_IEXL, _______, _______, _______, _______,                      _______,   _______, _______, _______,   _______, OS_LINE_S,
+        _______, _______, _______, _______, _______, _______,                       OS_WORD_L, ES_UDIA, _______, OS_WORD_R, _______, OS_LINE_E,
         _______, _______, _______, _______, _______, _______,                       KC_LEFT,    KC_DOWN, KC_UP,   KC_RGHT,    _______, KC_PGUP,
         _______, _______, _______, _______, _______, _______, _______,     _______, ES_NTIL,    _______, _______, _______,    ES_IQUE, KC_PGDN,
-                                   _______, _______, _______, _______,     S(KC_ENT), C(KC_BSPC), _______, _______
+                                   _______, _______, _______, _______,     S(KC_ENT), OS_WORD_BSPC, _______, _______
     ),
 
 /*
@@ -269,9 +344,9 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
  */
     [_ADJUST] = LAYOUT(
         UG_TOGG, _______, _______, _______, _______, _______,                       UG_NEXT, UG_SPDU, UG_HUEU, UG_SATU, UG_VALU, KC_VOLU,
-        _______, _______, _______, _______, _______, _______,                       UG_PREV, UG_SPDD, UG_HUED, UG_SATD, UG_VALD, KC_VOLD,
-        _______, _______, _______, _______, _______, _______,                       _______, KC_MPRV, KC_MPLY, KC_MNXT, _______, KC_BRIU,
-        _______, _______, _______, _______, _______, _______, _______,     KC_MUTE, _______, _______, _______, _______, _______, KC_BRID,
+        _______, _______, OS_MCTL, OS_LPAD, OS_DICT, _______,                       UG_PREV, UG_SPDD, UG_HUED, UG_SATD, UG_VALD, KC_VOLD,
+        _______, _______, _______, _______, _______, _______,                       _______, KC_MPRV, KC_MPLY, KC_MNXT, _______, OS_BRI_UP,
+        _______, _______, _______, _______, _______, _______, OS_DND,      KC_MUTE, _______, _______, _______, _______, _______, OS_BRI_DN,
                                    _______, _______, _______, _______,     _______, _______, _______, _______
     ),
 };
