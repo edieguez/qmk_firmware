@@ -17,7 +17,7 @@
 
 // Stock font plus the layer and modifier icons at 0x80+.
 #ifdef OLED_ENABLE
-#    define OLED_FONT_H "keyboards/soflecat_macos/keymaps/default/lib/glcdfont.c"
+#    define OLED_FONT_H "keyboards/soflecat/keymaps/default/lib/glcdfont.c"
 #endif
 
 // The half with USB traffic is the master. Helps ProMicros where the slave

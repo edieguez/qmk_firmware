@@ -20,7 +20,7 @@
 // a copy of `crkbd/soundmonster/glcdfont.c`), reused verbatim for its icon
 // glyphs at 0x80+ (layer-state blocks, GUI/Alt/Ctrl/Shift mod-status pairs,
 // bleed fillers) -- see render_layer_icon()/render_mod_icons_*() in
-// soflecat_macos.c for how those codepoints are used.
+// soflecat.c for how those codepoints are used.
 
 // Corne 8x6 font with QMK Firmware Logo
 // Online editor: https://helixfonteditor.netlify.com/

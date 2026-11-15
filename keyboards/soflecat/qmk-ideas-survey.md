@@ -32,7 +32,7 @@ Ranked by value against effort, respecting earlier decisions.
    LOWER left knob or ADJUST right knob. Enabled by listing the module in a
    `keymap.json`, with one define to use Cmd instead of Alt.
 5. **Keylog that clears itself** (`keyboards/tominabox1/le_chiffre/le_chiffre.c`)
-   — **done** (`KEYLOG_CLEAR_MS` in `soflecat_macos.c`). Three lines wipe the typed-character log after 30 s idle. Closes
+   — **done** (`KEYLOG_CLEAR_MS` in `soflecat.c`). Three lines wipe the typed-character log after 30 s idle. Closes
    most of the audit's password-on-OLED finding without removing the feature.
 6. **Per-chord Chordal Hold exceptions** (`docs/tap_hold.md`,
    `get_chordal_hold()`) — open. Allow a few same-hand chords (D+C, D+V, D+X,
