@@ -247,7 +247,7 @@ void post_process_record_kb(uint16_t keycode, keyrecord_t *record) {
     post_process_record_user(keycode, record);
 }
 
-// Icon glyphs are at 0x80+ in keymaps/default/lib/glcdfont.c, taken from
+// Icon glyphs are at 0x80+ in lib/glcdfont.c, taken from
 // splitkb/aurora/sofle_v2. The master OLED is portrait, 5 columns x 16 rows.
 
 // Layer numbers follow enum layers in keymap.c.
