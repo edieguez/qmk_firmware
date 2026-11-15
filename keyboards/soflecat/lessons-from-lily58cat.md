@@ -100,20 +100,13 @@ BASE today: │PgDn │PgUp │Globe│Lower│Space│ │Enter│Bs/Up│  =  
    effects that look clearly different, and keep one or two reactive effects
    and the typing heatmap if they're used.
 
-6. **Refresh the stale notes** — open, to discuss. Both files are untracked
-   and have drifted from `keymap.c`:
-   - **`CLAUDE.md`:** describes a number-row tap dance (digit/F-key) and a
-     "nav/Fn layer pair", and says `rules.mk` only has `ENCODER_MAP_ENABLE`.
-     Today there's no number-row tap dance, the layers are Lower/Upper/Adjust,
-     and `rules.mk` also enables Tap Dance, WPM, Caps Word and Key Overrides.
-   - **`quantum-keys-todo.md`:** lists `QK_GESC` on the top-left key, `OSM`
-     Shift keys, `QK_BOOT` on Adjust, and Option+Minus/I/O overrides. The
-     keymap has plain `KC_ESC`, plain mods, no `QK_BOOT`, and only the
-     Shift+Esc → `~` and Option+' → `` ` `` overrides.
+6. **Refresh the stale notes** — done. `CLAUDE.md` was rewritten against
+   the current `keymap.c`, `rules.mk` and `soflecat.c`; `quantum-keys-todo.md`
+   (Grave Escape, OSM shifts, `QK_BOOT`, Option+Minus/I/O overrides, none of
+   which exist) was deleted.
 
-7. **Use the `[row,col]` notation in this board's notes** — open, to
-   discuss. Add the diagram above to `CLAUDE.md`, so layout requests and
-   reviews can name keys the way the Lily review did.
+7. **Use the `[row,col]` notation in this board's notes** — done. The
+   diagram above is in `CLAUDE.md`.
 
 8. **Reassign the freed thumbs** — open, to discuss. Once items 1, 2 and 4
    are in, decide what each left thumb gets. Candidates: Adjust (next to
