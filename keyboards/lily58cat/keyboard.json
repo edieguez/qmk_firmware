@@ -10,6 +10,7 @@
     "features": {
         "bootmagic": true,
         "extrakey": true,
+        "oled": true,
         "rgblight": true
     },
     "matrix_pins": {
