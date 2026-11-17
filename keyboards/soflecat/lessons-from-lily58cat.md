@@ -23,7 +23,7 @@ than the Lily58 (`4,0`/`9,0`).
 │ 2,0 │ 2,1 │ 2,2 │ 2,3 │ 2,4 │ 2,5 │             │ 7,5 │ 7,4 │ 7,3 │ 7,2 │ 7,1 │ 7,0 │
 │ 3,0 │ 3,1 │ 3,2 │ 3,3 │ 3,4 │ 3,5 │ 4,5 │ │ 9,5 │ 8,5 │ 8,4 │ 8,3 │ 8,2 │ 8,1 │ 8,0 │
             │ 4,0 │ 4,1 │ 4,2 │ 4,3 │ 4,4 │ │ 9,4 │ 9,3 │ 9,2 │ 9,1 │ 9,0 │
-BASE today: │PgDn │PgUp │Globe│Lower│Space│ │Enter│Bs/Up│  =  │Home │ End │
+BASE today: │  -  │  -  │Globe│Lower│Space│ │Enter│Bs/Up│  =  │  -  │  -  │
 ```
 
 ## Part 1: lessons to port
@@ -54,16 +54,11 @@ BASE today: │PgDn │PgUp │Globe│Lower│Space│ │Enter│Bs/Up│  =  
      slots on the left hand. The RGB status messages on the OLED keep working,
      because the keycodes don't change.
 
-2. **Lower's outer column: line start/end and pages** — open.
-   - **Lily layout:** `5,0` line start, `6,0` line end, `7,0` PgUp, `8,0`
-     PgDn, with the document jumps dropped.
-   - **Here:** `5,0` `G(KC_LEFT)` and `6,0` `G(KC_RIGHT)` already are line
-     start/end. Change `7,0` and `8,0` from document top/end (`G(KC_UP)`,
-     `G(KC_DOWN)`) to `KC_PGUP`/`KC_PGDN`.
-   - **Frees BASE thumbs:** with PgUp/PgDn on Lower, `4,0` PgDn and `4,1`
-     PgUp come free. Home/End on `9,1`/`9,0` are *not* duplicates on macOS
-     (they scroll the document instead of moving to line start/end), so keep
-     them unless they're unused.
+2. **Lower's outer column: Home, End, PgUp, PgDn** — done (2026-11-17).
+   `5,0` Home, `6,0` End, `7,0` PgUp, `8,0` PgDn, as on the Lily; the
+   Cmd+arrow line and document jumps were dropped (the home row mods give
+   Cmd+arrow anyway). The BASE thumbs `4,0`, `4,1`, `9,1`, `9,0` are now
+   `KC_NO`, waiting for item 8.
 
 3. **ñ, ¿, ¡ on Lower** — open.
    - **Positions as on the Lily:** Lower+N `8,5` for ñ, Lower+/ `8,1` for ¿,
@@ -148,6 +143,21 @@ BASE today: │PgDn │PgUp │Globe│Lower│Space│ │Enter│Bs/Up│  =  
    - **Lily58:** the same idea probably won't fit there. Only about 500–750 B
      are free, and two key sets plus OS detection need more. It stays on two
      firmwares (`-km default` / `-km macos`) unless something is cut.
+
+## Part 3: keys reachable another way
+
+10. **Drop `` ` `` from Lower+Esc (`0,0`)** — open, decided. Option+' already
+    gives `` ` `` through `grave_key_override`, and Shift+Esc gives `~`.
+
+11. **Other duplicates of the same kind** — open, to discuss (found in a
+    review on 2026-11-17, not yet decided):
+    - **Lower's right knob** sends Option+Left/Right, the same as Lower+Y
+      (`6,5`) and Lower+O (`6,2`). One of the two is redundant.
+    - **Lower+Enter = Shift+Enter** (`9,4`). Home row Shift (F or J) plus
+      Enter does the same, and Permissive Hold makes that chord fast.
+    - **Lower+Backspace = Option+Backspace** (`9,3`). Home row Alt (A) plus
+      Backspace does the same, but Alt has no Permissive Hold, so A must be
+      held a full `TAPPING_TERM` first; the Lower key is quicker.
 
 ## Not applicable here
 

@@ -49,15 +49,15 @@ Keys are named by matrix `[row,col]` from `keyboard.json`. Left rows 0–4, righ
 │ 2,0 │ 2,1 │ 2,2 │ 2,3 │ 2,4 │ 2,5 │             │ 7,5 │ 7,4 │ 7,3 │ 7,2 │ 7,1 │ 7,0 │
 │ 3,0 │ 3,1 │ 3,2 │ 3,3 │ 3,4 │ 3,5 │ 4,5 │ │ 9,5 │ 8,5 │ 8,4 │ 8,3 │ 8,2 │ 8,1 │ 8,0 │
             │ 4,0 │ 4,1 │ 4,2 │ 4,3 │ 4,4 │ │ 9,4 │ 9,3 │ 9,2 │ 9,1 │ 9,0 │
-BASE today: │PgDn │PgUp │Globe│Lower│Space│ │Enter│Bs/Up│  =  │Home │ End │
+BASE today: │  -  │  -  │Globe│Lower│Space│ │Enter│Bs/Up│  =  │  -  │  -  │
 ```
 
 ## The layout today
 
 Four layers: `_BASE`, `_LOWER`, `_UPPER`, `_ADJUST`. The ASCII diagram above each layer in `keymap.c` is the reference; keep it in sync with the array.
 
-- **BASE:** QWERTY with home row mods — `LALT_T(A)`, `LCTL_T(S)`, `LGUI_T(D)`, `LSFT_T(F)` and the mirror on J K L ;. `2,0` is `TD(TD_CAPS)`: one tap Caps Word (or Caps Lock off if it's on), two taps Caps Lock. `3,0` is `[`, `8,0` is `ADJ_RBRC` = `LT(_ADJUST, KC_RBRC)`. Thumbs as in the diagram; `9,3` is `UPP_BSPC` = `LT(_UPPER, KC_BSPC)`. Knob clicks: Mute (left), Play (right). `4,2` is `MACOS_GLOBE`, a custom keycode sending consumer usage `AC_NEXT_KEYBOARD_LAYOUT_SELECT` (QMK has no Globe keycode).
-- **LOWER** (left thumb hold): arrows on H J K L, word jumps `A(KC_LEFT/RIGHT)` on Y and O, line start/end `G(KC_LEFT/RIGHT)` on `5,0`/`6,0`, document top/end `G(KC_UP/DOWN)` on `7,0`/`8,0`. `` ` `` on Esc, ¡ on 1, ü on U, ñ on N, Delete on M, ¿ on /. Enter sends Shift+Enter, Backspace sends Option+Backspace. Right knob jumps by word.
+- **BASE:** QWERTY with home row mods — `LALT_T(A)`, `LCTL_T(S)`, `LGUI_T(D)`, `LSFT_T(F)` and the mirror on J K L ;. `2,0` is `TD(TD_CAPS)`: one tap Caps Word (or Caps Lock off if it's on), two taps Caps Lock. `3,0` is `[`, `8,0` is `ADJ_RBRC` = `LT(_ADJUST, KC_RBRC)`. Thumbs as in the diagram; `4,0`, `4,1`, `9,1` and `9,0` are free (`KC_NO`) pending backlog item 8; `9,3` is `UPP_BSPC` = `LT(_UPPER, KC_BSPC)`. Knob clicks: Mute (left), Play (right). `4,2` is `MACOS_GLOBE`, a custom keycode sending consumer usage `AC_NEXT_KEYBOARD_LAYOUT_SELECT` (QMK has no Globe keycode).
+- **LOWER** (left thumb hold): arrows on H J K L, word jumps `A(KC_LEFT/RIGHT)` on Y and O, Home/End/PgUp/PgDn down the outer column `5,0`–`8,0` (on macOS Home/End scroll the document; line start/end is Cmd+arrow through the home row). `` ` `` on Esc, ¡ on 1, ü on U, ñ on N, Delete on M, ¿ on /. Enter sends Shift+Enter, Backspace sends Option+Backspace. Right knob jumps by word.
 - **UPPER** (held Backspace): F1–F5 on the number row, F6–F10 on Q–T, F11/F12 on D/F. Left knob zooms (`G(-)`/`G(=)`), click `G(0)` resets.
 - **ADJUST** (held `]`): RGB toggle/mode/hue on the left number row, sat/bri/speed on the right. Mission Control on W, Dictation (`LCAG(KC_D)`) on R, Do Not Disturb (`LCAG(KC_N)`) on the left knob click; those two chords must be bound in System Settings. Left knob: previous/next track.
 - **ñ / ü:** `ES_NTIL`/`ES_UDIA` custom keycodes. macOS Option+N / Option+U is a dead key, so `tap_mac_accent()` taps it with Shift removed, then the letter with Shift restored (or added if Caps Word is on). ¿ and ¡ are plain `A(S(KC_SLSH))` and `A(KC_1)`.

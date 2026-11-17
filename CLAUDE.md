@@ -100,7 +100,7 @@ Most stray `.hex`/`.bin`/`.uf2` files at the repo root are local build artifacts
 
 ### Branches
 - **`master` is the only branch that matters.** It holds both boards in one straight line on top of upstream `master` (`3329239097`): the Sofle commits, the `#26481` cherry-pick, the Lily58 commits, then the notes. It's pushed; `origin/master` matches.
-- The other local and remote branches (`soflecat`, `origin/soflecat`, `origin/lily58`) are stale leftovers the user is deleting. Don't compare against them or report their divergence.
+- **`soflecat`** (recreated from `master` on 2026-11-17) is the working branch for the Sofle changes. The old remote branches (`origin/soflecat`, `origin/lily58`) are stale leftovers the user is deleting; don't compare against them or report their divergence.
 - All three `CLAUDE.md` files and the soflecat notes are tracked and committed. Commit note changes like any other change.
 
 ### How the user works (follow strictly)

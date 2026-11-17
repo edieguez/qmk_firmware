@@ -223,7 +223,7 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
  * |------+------+------+------+------+------|  Mute |                | Play  |------+------+------+------+------+------|
  * |  [   |   Z  |   X  |   C  |   V  |   B  |-------|                |-------|   N  |   M  |   ,  |   .  |   /  |]/Adj |
  * `-----------------------------------------/       /                \      \-----------------------------------------'
- *                       | PgDn | PgUp |Globe |LOWER | Space|    |Enter |Bs/Upp|  =   | Home | End  |
+ *                       |      |      |Globe |LOWER | Space|    |Enter |Bs/Upp|  =   |      |      |
  *                       `----------------------------------'              '------''---------------------------'
  */
     [_BASE] = LAYOUT(
@@ -231,30 +231,31 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
         KC_TAB,      KC_Q,          KC_W,          KC_E,          KC_R,          KC_T,                                          KC_Y,          KC_U,          KC_I,          KC_O,          KC_P,            KC_BSLS,
         TD(TD_CAPS), LALT_T(KC_A),  LCTL_T(KC_S),  LGUI_T(KC_D),  LSFT_T(KC_F),  KC_G,                                          KC_H,          RSFT_T(KC_J),  RGUI_T(KC_K),  RCTL_T(KC_L),  RALT_T(KC_SCLN), KC_QUOTE,
         KC_LBRC,     KC_Z,          KC_X,          KC_C,          KC_V,          KC_B,    KC_MUTE,             KC_MPLY,        KC_N,          KC_M,          KC_COMMA,      KC_DOT,        KC_SLASH,        ADJ_RBRC,
-                                                    KC_PGDN,       KC_PGUP,      MACOS_GLOBE, MO(_LOWER), KC_SPACE, KC_ENTER, UPP_BSPC, KC_EQUAL, KC_HOME,   KC_END
+                                                    KC_NO,         KC_NO,        MACOS_GLOBE, MO(_LOWER), KC_SPACE, KC_ENTER, UPP_BSPC, KC_EQUAL, KC_NO,     KC_NO
     ),
 
 /*
- * LOWER. Arrows with word/line/document jumps around them. Backspace sends
- * Option+Backspace, Enter sends Shift+Enter. The right knob jumps by word.
+ * LOWER. Arrows with word jumps beside them; Home, End, PgUp, PgDn on the
+ * outer column. Backspace sends Option+Backspace, Enter sends Shift+Enter.
+ * The right knob jumps by word.
  * ñ on N, ü on U, ¿ on /, ¡ on 1 (Option sequences); Delete on M.
  * ,-----------------------------------------------------.                    ,-----------------------------------------------------.
- * |   `  |   ¡  |      |      |      |      |                                |      |      |      |      |      |LnStrt|
+ * |   `  |   ¡  |      |      |      |      |                                |      |      |      |      |      | Home |
  * |------+------+------+------+------+------|                                |------+------+------+------+------+------|
- * |      |      |      |      |      |      |                                | wLeft|   ü  |      |wRight|      | LnEnd|
+ * |      |      |      |      |      |      |                                | wLeft|   ü  |      |wRight|      | End  |
  * |------+------+------+------+------+------|                                |------+------+------+------+------+------|
- * |      |      |      |      |      |      |-------.                ,-------|  Left|  Down|   Up | Right|      |DocTop|
+ * |      |      |      |      |      |      |-------.                ,-------|  Left|  Down|   Up | Right|      | PgUp |
  * |------+------+------+------+------+------|       |                |       |------+------+------+------+------+------|
- * |      |      |      |      |      |      |-------|                |-------|   ñ  |  Del |      |      |   ¿  |DocEnd|
+ * |      |      |      |      |      |      |-------|                |-------|   ñ  |  Del |      |      |   ¿  | PgDn |
  * `-----------------------------------------/       /                \      \-----------------------------------------'
  *                       |      |      |      |LOWER |      |    |Sft+Enter| wBspc|      |      |      |
  *                       `----------------------------------'              '------''---------------------------'
  */
     [_LOWER] = LAYOUT(
-        KC_GRV,   ES_IEXL, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS,                                     KC_TRNS,    KC_TRNS, KC_TRNS,   KC_TRNS,     KC_TRNS,    G(KC_LEFT),
-        KC_TRNS,  KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS,                                     A(KC_LEFT), ES_UDIA, KC_TRNS,   A(KC_RIGHT), KC_TRNS,   G(KC_RIGHT),
-        KC_TRNS,  KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS,                                     KC_LEFT,    KC_DOWN, KC_UP,     KC_RIGHT,    KC_TRNS,    G(KC_UP),
-        KC_TRNS,  KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS,          KC_TRNS,           ES_NTIL,    KC_DEL,     KC_TRNS, KC_TRNS,     ES_IQUE,   G(KC_DOWN),
+        KC_GRV,   ES_IEXL, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS,                                     KC_TRNS,    KC_TRNS, KC_TRNS,   KC_TRNS,     KC_TRNS,    KC_HOME,
+        KC_TRNS,  KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS,                                     A(KC_LEFT), ES_UDIA, KC_TRNS,   A(KC_RIGHT), KC_TRNS,    KC_END,
+        KC_TRNS,  KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS,                                     KC_LEFT,    KC_DOWN, KC_UP,     KC_RIGHT,    KC_TRNS,    KC_PGUP,
+        KC_TRNS,  KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS,          KC_TRNS,           ES_NTIL,    KC_DEL,     KC_TRNS, KC_TRNS,     ES_IQUE,    KC_PGDN,
                                     KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, S(KC_ENTER),    A(KC_BSPC), KC_TRNS, KC_TRNS, KC_TRNS
     ),
 
