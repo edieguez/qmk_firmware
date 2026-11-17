@@ -99,5 +99,6 @@ acceleration; those would be from scratch.
   Option+arrow word jumps used on LOWER.
 - **OS detection, Autocorrect, Send String macros, Secure, Raw HID**: no fit for
   a macOS-only board with an IDE/terminal workflow.
-- **Dynamic tapping term**: a temporary tuning aid if the HRM test turns up a
-  timing problem, then removed.
+- **Dynamic tapping term**: superseded. Each home row mod's term is
+  adjustable from Adjust and saved to EEPROM through the keymap's own keys
+  (`HRM_*`), which QMK's version can't do.

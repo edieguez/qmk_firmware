@@ -14,6 +14,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 #include QMK_KEYBOARD_H
+#include <string.h>
 
 enum layers {
     _BASE,
@@ -32,16 +33,96 @@ enum custom_keycodes {
     MACOS_GLOBE = SAFE_RANGE,
     ES_NTIL, // ñ and ü: Option dead key, then the letter
     ES_UDIA,
+    // Home row mod tapping terms, see hrm_tuning. Selectors in the order of
+    // enum hrm_mod, the knob steps, then show and reset.
+    HRM_SEL_ALT,
+    HRM_SEL_CTRL,
+    HRM_SEL_CMD,
+    HRM_SEL_SHIFT,
+    HRM_KNOB_UP,
+    HRM_KNOB_DN,
+    HRM_SHOW,
+    HRM_RESET,
 };
 
 #define ES_IQUE A(S(KC_SLSH)) // ¿
 #define ES_IEXL A(KC_1)       // ¡
 
-#define ADJ_RBRC LT(_ADJUST, KC_RBRC) // ] on tap, Adjust on hold
 // Backspace on tap, Upper on hold. Tap, then hold again to auto-repeat.
 // Kept out of get_permissive_hold(): a backspace rolled into the next
 // letter has to stay a tap.
+#define ADJ_RBRC LT(_ADJUST, KC_RBRC) // ] on tap, Adjust on hold
 #define UPP_BSPC LT(_UPPER, KC_BSPC)
+
+// Each home row modifier's tapping term is adjustable from Adjust: tap A, S,
+// D or F to pick Alt/Ctrl/Cmd/Shift, then turn the left knob (5 ms per
+// detent). G shows all four, B resets them. The terms are kept in the user
+// EEPROM block, so they survive reboots; the selection isn't, and starts at
+// Shift. QMK's Dynamic Tapping Term wasn't used: it moves the one global
+// term and doesn't save it.
+enum hrm_mod { HRM_ALT, HRM_CTRL, HRM_CMD, HRM_SHIFT, HRM_MOD_COUNT };
+
+#define HRM_TERM_STEP 5
+#define HRM_TERM_MIN 100
+#define HRM_TERM_MAX 500
+// Shift/Cmd chords often have almost no key overlap at speed, so they get
+// extra time for the chord to register. +80 wasn't enough. Hold On Other Key
+// Press fixed the misses but fired on plain bigrams ("fi" -> "I").
+#define HRM_TERM_DEFAULTS \
+    { [HRM_ALT] = TAPPING_TERM, [HRM_CTRL] = TAPPING_TERM, [HRM_CMD] = TAPPING_TERM + 150, [HRM_SHIFT] = TAPPING_TERM + 150 }
+
+static const char *const hrm_mod_name[HRM_MOD_COUNT] = {"ALT", "CTRL", "CMD", "SHIFT"};
+
+typedef struct {
+    uint16_t term[HRM_MOD_COUNT];
+} hrm_tuning_t;
+_Static_assert(sizeof(hrm_tuning_t) == EECONFIG_USER_DATA_SIZE, "hrm_tuning_t must fill the user EEPROM block");
+
+static hrm_tuning_t hrm_tuning  = {.term = HRM_TERM_DEFAULTS};
+static enum hrm_mod hrm_selected = HRM_SHIFT; // what the knob adjusts
+
+static void hrm_tuning_save(void) {
+    eeconfig_update_user_datablock(&hrm_tuning, 0, sizeof(hrm_tuning));
+}
+
+// QMK calls this when the block is missing or EECONFIG_USER_DATA_VERSION
+// changed.
+void eeconfig_init_user_datablock(void) {
+    static const uint16_t defaults[HRM_MOD_COUNT] = HRM_TERM_DEFAULTS;
+    memcpy(hrm_tuning.term, defaults, sizeof(hrm_tuning.term));
+    hrm_tuning_save();
+}
+
+void keyboard_post_init_user(void) {
+    eeconfig_read_user_datablock(&hrm_tuning, 0, sizeof(hrm_tuning));
+    for (uint8_t i = 0; i < HRM_MOD_COUNT; i++) {
+        if (hrm_tuning.term[i] < HRM_TERM_MIN || hrm_tuning.term[i] > HRM_TERM_MAX) {
+            eeconfig_init_user_datablock();
+            return;
+        }
+    }
+}
+
+// Clamps, saves if it changed, and shows the value either way.
+static void hrm_term_set(enum hrm_mod mod, uint16_t term) {
+    if (term < HRM_TERM_MIN) {
+        term = HRM_TERM_MIN;
+    } else if (term > HRM_TERM_MAX) {
+        term = HRM_TERM_MAX;
+    }
+    if (term != hrm_tuning.term[mod]) {
+        hrm_tuning.term[mod] = term;
+        hrm_tuning_save();
+    }
+    oled_show_value(hrm_mod_name[mod], hrm_tuning.term[mod]);
+}
+
+// All four, one per two OLED rows.
+static void hrm_terms_show(void) {
+    char text[48];
+    snprintf(text, sizeof(text), "%s\n%u\n%s\n%u\n%s\n%u\n%s\n%u", hrm_mod_name[HRM_ALT], hrm_tuning.term[HRM_ALT], hrm_mod_name[HRM_CTRL], hrm_tuning.term[HRM_CTRL], hrm_mod_name[HRM_CMD], hrm_tuning.term[HRM_CMD], hrm_mod_name[HRM_SHIFT], hrm_tuning.term[HRM_SHIFT]);
+    oled_show_message(text);
+}
 
 // Option+N / Option+U is a dead key on macOS; the letter after it gets the
 // accent. Shift (or Caps Word, which never sees this key) only applies to
@@ -69,6 +150,29 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
         case ES_UDIA:
             if (record->event.pressed) {
                 tap_mac_accent(A(keycode == ES_NTIL ? KC_N : KC_U), keycode == ES_NTIL ? KC_N : KC_U);
+            }
+            return false;
+        case HRM_SEL_ALT ... HRM_SEL_SHIFT:
+            if (record->event.pressed) {
+                hrm_selected = keycode - HRM_SEL_ALT;
+                oled_show_value(hrm_mod_name[hrm_selected], hrm_tuning.term[hrm_selected]);
+            }
+            return false;
+        case HRM_KNOB_UP:
+        case HRM_KNOB_DN:
+            if (record->event.pressed) {
+                hrm_term_set(hrm_selected, hrm_tuning.term[hrm_selected] + (keycode == HRM_KNOB_UP ? HRM_TERM_STEP : -HRM_TERM_STEP));
+            }
+            return false;
+        case HRM_SHOW:
+            if (record->event.pressed) {
+                hrm_terms_show();
+            }
+            return false;
+        case HRM_RESET:
+            if (record->event.pressed) {
+                eeconfig_init_user_datablock();
+                hrm_terms_show();
             }
             return false;
         default:
@@ -143,16 +247,22 @@ uint16_t get_flow_tap_term(uint16_t keycode, keyrecord_t *record, uint16_t prev_
     }
 }
 
-// Shift/Cmd chords often have almost no key overlap at speed, so these four
-// get extra time for the chord to register. +80 wasn't enough. Hold On Other
-// Key Press fixed the misses but fired on plain bigrams ("fi" -> "I").
+// Per-modifier terms from hrm_tuning. Everything else (the Caps dance, the
+// layer taps) keeps TAPPING_TERM.
 uint16_t get_tapping_term(uint16_t keycode, keyrecord_t *record) {
     switch (keycode) {
-        case LSFT_T(KC_F):
-        case RSFT_T(KC_J):
+        case LALT_T(KC_A):
+        case RALT_T(KC_SCLN):
+            return hrm_tuning.term[HRM_ALT];
+        case LCTL_T(KC_S):
+        case RCTL_T(KC_L):
+            return hrm_tuning.term[HRM_CTRL];
         case LGUI_T(KC_D):
         case RGUI_T(KC_K):
-            return TAPPING_TERM + 150;
+            return hrm_tuning.term[HRM_CMD];
+        case LSFT_T(KC_F):
+        case RSFT_T(KC_J):
+            return hrm_tuning.term[HRM_SHIFT];
         default:
             return TAPPING_TERM;
     }
@@ -285,17 +395,20 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
 
 /*
  * ADJUST. RGB controls on the number row, Mission Control and Dictation on
- * W/R. Left knob: previous/next track, click Do Not Disturb. Dictation
- * (Ctrl+Opt+Cmd+D) and Do Not Disturb (Ctrl+Opt+Cmd+N) are chords that have
- * to be bound in System Settings.
+ * W/R. Home row mod tapping terms: tap A, S, D or F to pick
+ * Alt/Ctrl/Cmd/Shift, then turn the left knob (5 ms a detent); G shows all
+ * four, B resets them; the values are kept in EEPROM. Left knob click: Do Not
+ * Disturb. Right knob: previous/next track. Dictation (Ctrl+Opt+Cmd+D) and Do
+ * Not Disturb (Ctrl+Opt+Cmd+N) are chords that have to be bound in System
+ * Settings.
  * ,-----------------------------------------------------.                    ,-----------------------------------------------------.
  * |RGBTog|Mode- |Mode+ | Hue- | Hue+ |      |                                | Sat- | Sat+ | Bri- | Bri+ | Spd- | Spd+ |
  * |------+------+------+------+------+------|                                |------+------+------+------+------+------|
  * |      |      |MCtrl |      | Dict |      |                                |      |      |      |      |      |      |
  * |------+------+------+------+------+------|                                |------+------+------+------+------+------|
- * |      |      |      |      |      |      |-------.                ,-------|      |      |      |      |      |      |
+ * |      | Alt  | Ctrl | Cmd  | Sft  | Show |-------.                ,-------|      |      |      |      |      |      |
  * |------+------+------+------+------+------|  DND  |                |       |------+------+------+------+------+------|
- * |      |      |      |      |      |      |-------|                |-------|      |      |      |      |      |      |
+ * |      |      |      |      |      |Reset |-------|                |-------|      |      |      |      |      |      |
  * `-----------------------------------------/       /                \      \-----------------------------------------'
  *                       |      |      |      |      |      |    |      |      |      |      |      |
  *                       `----------------------------------'              '------''---------------------------'
@@ -303,8 +416,8 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
     [_ADJUST] = LAYOUT(
         RM_TOGG,  RM_PREV, RM_NEXT, RM_HUED,   RM_HUEU,    KC_TRNS,                                     RM_SATD, RM_SATU, RM_VALD,  RM_VALU, RM_SPDD, RM_SPDU,
         KC_TRNS,  KC_TRNS, KC_MCTL, KC_TRNS,   LCAG(KC_D), KC_TRNS,                                     KC_TRNS, KC_TRNS, KC_TRNS,  KC_TRNS, KC_TRNS, KC_TRNS,
-        KC_TRNS,  KC_TRNS, KC_TRNS, KC_TRNS,   KC_TRNS,    KC_TRNS,                                     KC_TRNS, KC_TRNS, KC_TRNS,  KC_TRNS, KC_TRNS, KC_TRNS,
-        KC_TRNS,  KC_TRNS, KC_TRNS, KC_TRNS,   KC_TRNS,    KC_TRNS, LCAG(KC_N),       KC_TRNS,           KC_TRNS, KC_TRNS, KC_TRNS,  KC_TRNS, KC_TRNS, KC_TRNS,
+        KC_TRNS,  HRM_SEL_ALT, HRM_SEL_CTRL, HRM_SEL_CMD, HRM_SEL_SHIFT, HRM_SHOW,                        KC_TRNS, KC_TRNS, KC_TRNS,  KC_TRNS, KC_TRNS, KC_TRNS,
+        KC_TRNS,  KC_TRNS, KC_TRNS, KC_TRNS,   KC_TRNS,    HRM_RESET, LCAG(KC_N),       KC_TRNS,           KC_TRNS, KC_TRNS, KC_TRNS,  KC_TRNS, KC_TRNS, KC_TRNS,
                                     KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS,  KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS
     ),
 };
@@ -346,10 +459,11 @@ bool rgb_matrix_indicators_advanced_user(uint8_t led_min, uint8_t led_max) {
 #if defined(ENCODER_MAP_ENABLE)
 const uint16_t PROGMEM encoder_map[][NUM_ENCODERS][NUM_DIRECTIONS] = {
     // Base: brightness (macOS maps F14/F15 to it) and volume. On the layers
-    // the knob sits opposite the hand holding the layer.
+    // the knob sits opposite the hand holding the layer; on Adjust the left
+    // knob steps the selected home row mod's tapping term.
     [_BASE]   = { ENCODER_CCW_CW(KC_F14, KC_F15),     ENCODER_CCW_CW(KC_VOLD, KC_VOLU) },
     [_LOWER]  = { ENCODER_CCW_CW(KC_TRNS, KC_TRNS),   ENCODER_CCW_CW(A(KC_LEFT), A(KC_RIGHT)) },
     [_UPPER]  = { ENCODER_CCW_CW(G(KC_MINS), G(KC_EQL)), ENCODER_CCW_CW(KC_TRNS, KC_TRNS) },
-    [_ADJUST] = { ENCODER_CCW_CW(KC_MPRV, KC_MNXT),   ENCODER_CCW_CW(KC_TRNS, KC_TRNS) },
+    [_ADJUST] = { ENCODER_CCW_CW(HRM_KNOB_DN, HRM_KNOB_UP), ENCODER_CCW_CW(KC_MPRV, KC_MNXT) },
 };
 #endif

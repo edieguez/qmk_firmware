@@ -159,6 +159,17 @@ BASE today: │  -  │  -  │Globe│Lower│Space│ │Enter│Bs/Up│  =  
       Backspace does the same, but Alt has no Permissive Hold, so A must be
       held a full `TAPPING_TERM` first; the Lower key is quicker.
 
+## Part 4: tuning from the keyboard
+
+12. **Home row mod tapping terms adjustable from Adjust, saved to EEPROM**
+    — done (2026-11-17). On Adjust, tap A, S, D or F to pick
+    Alt/Ctrl/Cmd/Shift, then turn the left knob (5 ms a detent); G shows all
+    four on the OLED, B resets them (Alt/Ctrl 200, Cmd/Shift 350). The
+    values live in the user EEPROM block; the selection starts at Shift.
+    Previous/next track moved to the right knob on Adjust. Flow Tap stays
+    compile-time, and the Speculative Hold flow term can't be made
+    adjustable without editing core.
+
 ## Not applicable here
 
 Recorded so they aren't re-investigated:

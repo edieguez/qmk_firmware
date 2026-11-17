@@ -10,7 +10,7 @@ The directory was bootstrapped as a clone of upstream `keyboards/sofle_choc/`, s
 
 The keymap is **macOS-only today**. Linux lives on the sibling board `keyboards/lily58cat/`, and the plan is to merge the two into one firmware that picks the OS at runtime.
 
-**Keyboard-level source file naming is load-bearing.** `builddefs/build_keyboard.mk` only auto-compiles a keyboard-level `.c` whose name exactly matches the folder (`keyboards/<kb>/<kb>.c`), gated by a `wildcard` check — no match, no compile, no error. After the clone the file was still `sofle_choc.c` and was silently excluded from every build: the generic OLED driver still initialised the displays (they flashed on power-up), but `oled_init_kb()`/`oled_task_kb()` were never linked, so the screens went dark right after. If this directory is renamed again, rename `soflecat.c` in the same commit.
+**Keyboard-level source file naming is load-bearing.** `builddefs/build_keyboard.mk` only auto-compiles a keyboard-level `.c` whose name exactly matches the folder (`keyboards/<kb>/<kb>.c`), gated by a `wildcard` check — no match, no compile, no error. After the clone the file was still `sofle_choc.c` and was silently excluded from every build: the generic OLED driver still initialised the displays (they flashed on power-up), but `oled_init_kb()`/`oled_task_kb()` were never linked, so the screens went dark right after. The same rule picks up `soflecat.h` as the keyboard header behind `QMK_KEYBOARD_H`. If this directory is renamed again, rename `soflecat.c` and `soflecat.h` in the same commit.
 
 ## Build & flash
 
@@ -32,9 +32,10 @@ Flash size doesn't matter here (RP2040, ~2 MB). It does on the Lily58.
 ## Files
 
 - `keyboard.json` — matrix, encoder, split, 42 RGB Matrix animations, per-key LED positions (`rgb_matrix.layout`, keyed by matrix position), the `LAYOUT` macro.
-- `soflecat.c` — keyboard-level hooks: both OLEDs, RGB status messages, keylog, and a stuck-USB-suspend recovery (see below).
+- `soflecat.c` — keyboard-level hooks: both OLEDs, the OLED message (RGB changes and the keymap's `oled_show_value()`), keylog, and a stuck-USB-suspend recovery (see below).
+- `soflecat.h` — the keyboard header; declares `oled_show_value()` and `oled_show_message()` for the keymap.
 - `keymaps/default/keymap.c` — layers, custom keycodes, tap dance, tap-hold tuning callbacks, key overrides, Chordal Hold layout, layer-overlay RGB indicator, encoder map.
-- `keymaps/default/config.h` — split/OLED/RGB defines and the tap-hold constants.
+- `keymaps/default/config.h` — split/OLED/RGB defines, the tap-hold constants, and the user EEPROM block (`EECONFIG_USER_DATA_SIZE 8`, version 2) that holds the runtime tuning.
 - `keymaps/default/rules.mk` — `ENCODER_MAP_ENABLE`, `TAP_DANCE_ENABLE`, `WPM_ENABLE`, `CAPS_WORD_ENABLE`, `KEY_OVERRIDE_ENABLE`, `CONVERT_TO = rp2040_ce`, `SRC += lib/bongocat.c`.
 - `keymaps/default/lib/` — `bongocat.c/.h` (slave OLED animation, from HorrorTroll) and `glcdfont.c` (stock font plus layer/modifier icons at 0x80+, from splitkb/aurora/sofle_v2; selected through `OLED_FONT_H` in `config.h`).
 - Notes: `lessons-from-lily58cat.md` is the **backlog** (items 1–9, with status markers). `qmk-ideas-survey.md` and `qmk-features-reference.md` are research, several items marked done. `soflecat.vil` is not read by the build.
@@ -59,7 +60,7 @@ Four layers: `_BASE`, `_LOWER`, `_UPPER`, `_ADJUST`. The ASCII diagram above eac
 - **BASE:** QWERTY with home row mods — `LALT_T(A)`, `LCTL_T(S)`, `LGUI_T(D)`, `LSFT_T(F)` and the mirror on J K L ;. `2,0` is `TD(TD_CAPS)`: one tap Caps Word (or Caps Lock off if it's on), two taps Caps Lock. `3,0` is `[`, `8,0` is `ADJ_RBRC` = `LT(_ADJUST, KC_RBRC)`. Thumbs as in the diagram; `4,0`, `4,1`, `9,1` and `9,0` are free (`KC_NO`) pending backlog item 8; `9,3` is `UPP_BSPC` = `LT(_UPPER, KC_BSPC)`. Knob clicks: Mute (left), Play (right). `4,2` is `MACOS_GLOBE`, a custom keycode sending consumer usage `AC_NEXT_KEYBOARD_LAYOUT_SELECT` (QMK has no Globe keycode).
 - **LOWER** (left thumb hold): arrows on H J K L, word jumps `A(KC_LEFT/RIGHT)` on Y and O, Home/End/PgUp/PgDn down the outer column `5,0`–`8,0` (on macOS Home/End scroll the document; line start/end is Cmd+arrow through the home row). `` ` `` on Esc, ¡ on 1, ü on U, ñ on N, Delete on M, ¿ on /. Enter sends Shift+Enter, Backspace sends Option+Backspace. Right knob jumps by word.
 - **UPPER** (held Backspace): F1–F5 on the number row, F6–F10 on Q–T, F11/F12 on D/F. Left knob zooms (`G(-)`/`G(=)`), click `G(0)` resets.
-- **ADJUST** (held `]`): RGB toggle/mode/hue on the left number row, sat/bri/speed on the right. Mission Control on W, Dictation (`LCAG(KC_D)`) on R, Do Not Disturb (`LCAG(KC_N)`) on the left knob click; those two chords must be bound in System Settings. Left knob: previous/next track.
+- **ADJUST** (held `]`): RGB toggle/mode/hue on the left number row, sat/bri/speed on the right. Mission Control on W, Dictation (`LCAG(KC_D)`) on R, Do Not Disturb (`LCAG(KC_N)`) on the left knob click; those two chords must be bound in System Settings. Right knob: previous/next track. Home row mod tapping terms: tap A S D F (`2,1`–`2,4`) to select Alt/Ctrl/Cmd/Shift (`HRM_SEL_*`), turn the left knob to step the selected term by 5 ms (`HRM_KNOB_UP/DN` in the encoder map), G `2,5` shows all four, B `3,5` resets them. The selection is RAM only and starts at Shift.
 - **ñ / ü:** `ES_NTIL`/`ES_UDIA` custom keycodes. macOS Option+N / Option+U is a dead key, so `tap_mac_accent()` taps it with Shift removed, then the letter with Shift restored (or added if Caps Word is on). ¿ and ¡ are plain `A(S(KC_SLSH))` and `A(KC_1)`.
 - **Key overrides:** Shift+Esc → `~` (Grave Escape was rejected: Cmd+Esc became Cmd+`, which macOS eats, so it couldn't cancel Cmd+Tab) and Option+' → `` ` ``.
 - **Encoder map** per layer, in `keymap.c`. BASE: left knob F14/F15 (macOS screen brightness, confirmed working), right knob volume.
@@ -68,7 +69,7 @@ Four layers: `_BASE`, `_LOWER`, `_UPPER`, `_ADJUST`. The ASCII diagram above eac
 
 `config.h`: `TAPPING_TERM 200`, `PERMISSIVE_HOLD` (per key), `CHORDAL_HOLD`, `FLOW_TAP_TERM 150`, `SPECULATIVE_HOLD` with `SPECULATIVE_HOLD_FLOW_TERM 150`. The callbacks in `keymap.c` single out the four Shift/Cmd keys (`LSFT_T(F)`, `RSFT_T(J)`, `LGUI_T(D)`, `RGUI_T(K)`):
 
-- `get_tapping_term()`: +150 ms for those four (chords at speed have almost no overlap; +80 wasn't enough; Hold On Other Key Press fired on bigrams like "fi").
+- `get_tapping_term()`: +150 ms for those four (chords at speed have almost no overlap; +80 wasn't enough; Hold On Other Key Press fired on bigrams like "fi"). All four terms are runtime values in `hrm_tuning.term[]` (defaults Alt/Ctrl 200, Cmd/Shift 350; range 100–500 in 5 ms steps), stored in the user EEPROM block and restored in `keyboard_post_init_user()`; `eeconfig_init_user_datablock()` writes the defaults when the block is missing or its version changes. QMK's Dynamic Tapping Term wasn't used because it only moves the global term and isn't saved; the Speculative Hold flow term can't be made runtime without editing core.
 - `get_permissive_hold()`: those four plus `ADJ_RBRC` only. On Alt/Ctrl it turned cross-hand rolls into holds ("also" → "aso").
 - `get_flow_tap_term()`: 0 for those four, otherwise Flow Tap settled them as taps before Chordal Hold saw the next key (broke fast Shift+/ and Cmd+V).
 - `get_speculative_hold()`: those four only, so Shift/Cmd-click is instant. Ctrl stays out because Ctrl+click is right-click on macOS.
@@ -84,7 +85,7 @@ Four layers: `_BASE`, `_LOWER`, `_UPPER`, `_ADJUST`. The ASCII diagram above eac
 ## OLEDs and RGB (`soflecat.c`)
 
 - Master OLED is portrait (`OLED_ROTATION_270`, 5 columns × 16 rows): layer icon (rows 0–2), GUI/Alt and Ctrl/Shift icons (rows 4–7, lit from `get_mods() | get_oneshot_mods() | get_speculative_mods()`), `CAPS` and `WORD` flags (rows 9–10), and a 20-character keylog (rows 12–15) that only logs keys with an obvious single character, logs the tap keycode of mod-taps and layer-taps, and clears after 30 s idle (`KEYLOG_CLEAR_MS`). Slave OLED: bongocat with WPM (`SPLIT_WPM_ENABLE`).
-- RGB changes (toggle, mode name, hue, sat, bri, speed) replace the status screen for 1.5 s. `poll_rgb_status()` diffs the RGB state each frame; sat/val/speed at their limits don't change, so `process_record_kb()` flags the `RM_*` presses (they're consumed before `post_process_record_kb()`). `oled_write()` only touches the cells it draws, so the screen is cleared when switching between message and status and when the message text changes.
+- A two-line message (`oled_show_text()`/`oled_show_value()`) replaces the status screen for 1.5 s. RGB changes (toggle, mode name, hue, sat, bri, speed) use it, and the keymap's tapping-term keys do too. `poll_rgb_status()` diffs the RGB state each frame; sat/val/speed at their limits don't change, so `process_record_kb()` flags the `RM_*` presses (they're consumed before `post_process_record_kb()`). `oled_write()` only touches the cells it draws, so the screen is cleared when switching between message and status and when the message text changes.
 - `rgb_matrix_indicators_advanced_user()` in `keymap.c` lights the keys that do something on the held layer (Lower cyan, Upper green, Adjust orange) and blanks the rest, except on Adjust where the running effect stays visible. Needs `SPLIT_LAYER_STATE_ENABLE`; `SPLIT_TRANSPORT_MIRROR` lets the slave react to the master's presses.
 - `RGB_MATRIX_TIMEOUT` was tried and removed: the user wants the lights on when idle. `RGB_MATRIX_MAXIMUM_BRIGHTNESS 100`: higher can brown out the controller.
 - `OLED_FADE_OUT`, `SPLIT_OLED_ENABLE` and `SPLIT_ACTIVITY_ENABLE` keep both screens sleeping and waking together.

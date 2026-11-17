@@ -41,7 +41,8 @@
 #define OLED_FADE_OUT_INTERVAL 5
 #define RGB_MATRIX_MAXIMUM_BRIGHTNESS 100 // higher can brown out the controller
 
-// Home row mods. See keymap.c for the per-key exceptions.
+// Home row mods. See keymap.c for the per-key exceptions; each modifier's
+// term is adjustable at runtime and stored in the user EEPROM block below.
 #define TAPPING_TERM 200
 #define PERMISSIVE_HOLD
 #define PERMISSIVE_HOLD_PER_KEY
@@ -53,3 +54,8 @@
 // key so fast typing doesn't flash lone modifiers.
 #define SPECULATIVE_HOLD
 #define SPECULATIVE_HOLD_FLOW_TERM 150
+
+// Runtime tuning kept across reboots (hrm_tuning in keymap.c). Bump the
+// version to throw stored values away.
+#define EECONFIG_USER_DATA_SIZE 8
+#define EECONFIG_USER_DATA_VERSION 2

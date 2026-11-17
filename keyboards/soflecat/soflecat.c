@@ -15,33 +15,49 @@
  */
 
 #include <string.h>
-#include "quantum.h"
+#include "soflecat.h"
 #include "lib/bongocat.h"
 
 #ifdef OLED_ENABLE
 
-#define OLED_STATUS_BUF_LEN 40
+// A two-line message (label, then value) that replaces the status screen
+// on the master OLED for a moment. RGB changes use it, and so does the
+// keymap through oled_show_value().
+#define OLED_MESSAGE_BUF_LEN 48
+#define OLED_MESSAGE_DISPLAY_MS 1500
 
-#ifdef RGB_MATRIX_ENABLE
-#    define RGB_STATUS_DISPLAY_MS 1500
-
-static char     rgb_status[OLED_STATUS_BUF_LEN] = "";
-static uint32_t rgb_status_shown_until = 0;
+static char     oled_message[OLED_MESSAGE_BUF_LEN] = "";
+static uint32_t oled_message_shown_until = 0;
 // Bumped per message. oled_write() only touches the cells it draws, so
 // render_status() clears the screen when this changes.
-static uint8_t  rgb_status_version = 0;
+static uint8_t oled_message_version = 0;
 
+static void oled_message_posted(void) {
+    oled_message_shown_until = timer_read32() + OLED_MESSAGE_DISPLAY_MS;
+    oled_message_version++;
+}
+
+void oled_show_message(const char *text) {
+    snprintf(oled_message, sizeof(oled_message), "%s", text);
+    oled_message_posted();
+}
+
+static void oled_show_text(const char *label, const char *text) {
+    snprintf(oled_message, sizeof(oled_message), "%s\n%s", label, text);
+    oled_message_posted();
+}
+
+void oled_show_value(const char *label, uint16_t value) {
+    snprintf(oled_message, sizeof(oled_message), "%s\n%u", label, value);
+    oled_message_posted();
+}
+
+#ifdef RGB_MATRIX_ENABLE
 // Sat/val/speed stop changing at their limits, so the diff below misses
 // those presses. process_record_kb() flags them.
 static bool sat_key_pressed   = false;
 static bool val_key_pressed   = false;
 static bool speed_key_pressed = false;
-
-static void show_rgb_status(const char *label, uint8_t value) {
-    snprintf(rgb_status, sizeof(rgb_status), "%s\n%u", label, value);
-    rgb_status_shown_until = timer_read32() + RGB_STATUS_DISPLAY_MS;
-    rgb_status_version++;
-}
 
 // Show whichever RGB setting changed last, briefly, whether by key or knob.
 static void poll_rgb_status(void) {
@@ -64,21 +80,17 @@ static void poll_rgb_status(void) {
     if (!initialized) {
         initialized = true;
     } else if (enabled != last_enabled) {
-        snprintf(rgb_status, sizeof(rgb_status), "RGB\n%s", enabled ? "ON" : "OFF");
-        rgb_status_shown_until = timer_read32() + RGB_STATUS_DISPLAY_MS;
-        rgb_status_version++;
+        oled_show_text("RGB", enabled ? "ON" : "OFF");
     } else if (mode != last_mode) {
-        snprintf(rgb_status, sizeof(rgb_status), "RGB MODE\n%s", rgb_matrix_get_mode_name(mode));
-        rgb_status_shown_until = timer_read32() + RGB_STATUS_DISPLAY_MS;
-        rgb_status_version++;
+        oled_show_text("RGB MODE", rgb_matrix_get_mode_name(mode));
     } else if (hue != last_hue) {
-        show_rgb_status("RGB HUE", hue);
+        oled_show_value("RGB HUE", hue);
     } else if (sat != last_sat || sat_key_pressed) {
-        show_rgb_status("RGB SAT", sat);
+        oled_show_value("RGB SAT", sat);
     } else if (val != last_val || val_key_pressed) {
-        show_rgb_status("RGB BRI", val);
+        oled_show_value("RGB BRI", val);
     } else if (speed != last_speed || speed_key_pressed) {
-        show_rgb_status("RGB SPEED", speed);
+        oled_show_value("RGB SPEED", speed);
     }
 
     last_enabled      = enabled;
@@ -92,16 +104,18 @@ static void poll_rgb_status(void) {
     speed_key_pressed = false;
 }
 
+#endif
+
 // NULL once the message has expired.
-static const char *rgb_status_message(void) {
+static const char *oled_message_current(void) {
+#ifdef RGB_MATRIX_ENABLE
     poll_rgb_status();
-    if (timer_expired32(timer_read32(), rgb_status_shown_until)) {
+#endif
+    if (timer_expired32(timer_read32(), oled_message_shown_until)) {
         return NULL;
     }
-    return rgb_status;
+    return oled_message;
 }
-
-#endif
 
 // Last 20 typed characters, bottom of the master OLED. Only keys with an
 // obvious single character are logged. Cleared after 30 s idle so a
@@ -304,32 +318,27 @@ static void render_mod_icons_ctrl_shift(uint8_t modifiers) {
 // Rows: 0-2 layer icon, 4-5 GUI/Alt, 6-7 Ctrl/Shift, 9 CAPS, 10 WORD,
 // 12-15 keylog. 3, 8 and 11 are spacers.
 static void render_status(void) {
-    const char *rgb_message = NULL;
-#ifdef RGB_MATRIX_ENABLE
-    rgb_message = rgb_status_message();
-#endif
+    const char *message = oled_message_current();
 
     // oled_write() leaves cells it doesn't draw alone, so clear when switching
-    // between the RGB message and the status screen, and when the message
-    // text changes.
-    static bool    last_was_rgb_message = false;
-    static uint8_t drawn_rgb_version    = 0;
-    bool           is_rgb_message       = rgb_message != NULL;
-    if (is_rgb_message != last_was_rgb_message) {
+    // between a message and the status screen, and when the message text
+    // changes.
+    static bool    last_was_message      = false;
+    static uint8_t drawn_message_version = 0;
+    bool           is_message            = message != NULL;
+    if (is_message != last_was_message) {
         oled_clear();
-        last_was_rgb_message = is_rgb_message;
+        last_was_message = is_message;
     }
 
     oled_set_cursor(0, 0);
 
-    if (rgb_message != NULL) {
-#ifdef RGB_MATRIX_ENABLE
-        if (drawn_rgb_version != rgb_status_version) {
+    if (message != NULL) {
+        if (drawn_message_version != oled_message_version) {
             oled_clear();
-            drawn_rgb_version = rgb_status_version;
+            drawn_message_version = oled_message_version;
         }
-#endif
-        oled_write(rgb_message, false);
+        oled_write(message, false);
         return;
     }
 
