@@ -23,12 +23,17 @@ than the Lily58 (`4,0`/`9,0`).
 │ 2,0 │ 2,1 │ 2,2 │ 2,3 │ 2,4 │ 2,5 │             │ 7,5 │ 7,4 │ 7,3 │ 7,2 │ 7,1 │ 7,0 │
 │ 3,0 │ 3,1 │ 3,2 │ 3,3 │ 3,4 │ 3,5 │ 4,5 │ │ 9,5 │ 8,5 │ 8,4 │ 8,3 │ 8,2 │ 8,1 │ 8,0 │
             │ 4,0 │ 4,1 │ 4,2 │ 4,3 │ 4,4 │ │ 9,4 │ 9,3 │ 9,2 │ 9,1 │ 9,0 │
-BASE today: │  -  │  -  │Globe│Lower│Space│ │Enter│Bs/Up│  =  │  -  │  -  │
+BASE today: │  -  │  -  │Globe│Lower│Space│ │Enter│Bs/Up│  =  │  -  │ Adj │
 ```
 
 ## Part 1: lessons to port
 
-1. **Adjust on a thumb, and a rebuilt Adjust** — open.
+1. **Adjust on a thumb, and a rebuilt Adjust** — done (2026-11-17): plain
+   `KC_RBRC` on `8,0`, `ADJ_RBRC` dropped from `get_permissive_hold()`,
+   `MO(_ADJUST)` on the right outer thumb `9,0`. The layer itself wasn't
+   rebuilt: held with the right thumb, its left-hand keys (RGB, Mission
+   Control, Dictation, the tapping-term keys) are already under the free
+   hand. The original notes follow.
    - **Problem:** `8,0` is `LT(_ADJUST, KC_RBRC)` (`ADJ_RBRC`) with
      Permissive Hold. If `]` overlaps a left-hand key or a thumb that is
      pressed *and released* before `]` comes up, it becomes Adjust plus that
@@ -103,10 +108,9 @@ BASE today: │  -  │  -  │Globe│Lower│Space│ │Enter│Bs/Up│  =  
 7. **Use the `[row,col]` notation in this board's notes** — done. The
    diagram above is in `CLAUDE.md`.
 
-8. **Reassign the freed thumbs** — open, to discuss. Once items 1, 2 and 4
-   are in, decide what each left thumb gets. Candidates: Adjust (next to
-   Lower, as on the Lily), the screenshot key, Delete (if it leaves Lower for
-   ñ), and the Globe key `4,2` (keep, move or drop). On the Lily the thumbs
+8. **Reassign the freed thumbs** — open, to discuss. `9,0` is now Adjust;
+   `4,0`, `4,1` and `9,1` are still free. Candidates: the screenshot key
+   (item 4) and the Globe key `4,2` (keep, move or drop). On the Lily the thumbs
    ended up as Print Screen, Adjust, Lower, Space and Enter,
    Backspace/Upper, `=`, Super.
 
@@ -146,8 +150,9 @@ BASE today: │  -  │  -  │Globe│Lower│Space│ │Enter│Bs/Up│  =  
 
 ## Part 3: keys reachable another way
 
-10. **Drop `` ` `` from Lower+Esc (`0,0`)** — open, decided. Option+' already
+10. **Drop `` ` `` from Lower+Esc (`0,0`)** — done (2026-11-17). Option+'
     gives `` ` `` through `grave_key_override`, and Shift+Esc gives `~`.
+    Delete moved from Lower+M (`8,4`) into the freed slot.
 
 11. **Other duplicates of the same kind** — open, to discuss (found in a
     review on 2026-11-17, not yet decided):

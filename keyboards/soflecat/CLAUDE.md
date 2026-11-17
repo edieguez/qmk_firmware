@@ -50,17 +50,17 @@ Keys are named by matrix `[row,col]` from `keyboard.json`. Left rows 0–4, righ
 │ 2,0 │ 2,1 │ 2,2 │ 2,3 │ 2,4 │ 2,5 │             │ 7,5 │ 7,4 │ 7,3 │ 7,2 │ 7,1 │ 7,0 │
 │ 3,0 │ 3,1 │ 3,2 │ 3,3 │ 3,4 │ 3,5 │ 4,5 │ │ 9,5 │ 8,5 │ 8,4 │ 8,3 │ 8,2 │ 8,1 │ 8,0 │
             │ 4,0 │ 4,1 │ 4,2 │ 4,3 │ 4,4 │ │ 9,4 │ 9,3 │ 9,2 │ 9,1 │ 9,0 │
-BASE today: │  -  │  -  │Globe│Lower│Space│ │Enter│Bs/Up│  =  │  -  │  -  │
+BASE today: │  -  │  -  │Globe│Lower│Space│ │Enter│Bs/Up│  =  │  -  │ Adj │
 ```
 
 ## The layout today
 
 Four layers: `_BASE`, `_LOWER`, `_UPPER`, `_ADJUST`. The ASCII diagram above each layer in `keymap.c` is the reference; keep it in sync with the array.
 
-- **BASE:** QWERTY with home row mods — `LALT_T(A)`, `LCTL_T(S)`, `LGUI_T(D)`, `LSFT_T(F)` and the mirror on J K L ;. `2,0` is `TD(TD_CAPS)`: one tap Caps Word (or Caps Lock off if it's on), two taps Caps Lock. `3,0` is `[`, `8,0` is `ADJ_RBRC` = `LT(_ADJUST, KC_RBRC)`. Thumbs as in the diagram; `4,0`, `4,1`, `9,1` and `9,0` are free (`KC_NO`) pending backlog item 8; `9,3` is `UPP_BSPC` = `LT(_UPPER, KC_BSPC)`. Knob clicks: Mute (left), Play (right). `4,2` is `MACOS_GLOBE`, a custom keycode sending consumer usage `AC_NEXT_KEYBOARD_LAYOUT_SELECT` (QMK has no Globe keycode).
-- **LOWER** (left thumb hold): arrows on H J K L, word jumps `A(KC_LEFT/RIGHT)` on Y and O, Home/End/PgUp/PgDn down the outer column `5,0`–`8,0` (on macOS Home/End scroll the document; line start/end is Cmd+arrow through the home row). `` ` `` on Esc, ¡ on 1, ü on U, ñ on N, Delete on M, ¿ on /. Enter sends Shift+Enter, Backspace sends Option+Backspace. Right knob jumps by word.
+- **BASE:** QWERTY with home row mods — `LALT_T(A)`, `LCTL_T(S)`, `LGUI_T(D)`, `LSFT_T(F)` and the mirror on J K L ;. `2,0` is `TD(TD_CAPS)`: one tap Caps Word (or Caps Lock off if it's on), two taps Caps Lock. `3,0` is `[`, `8,0` is `]`. Thumbs as in the diagram; `9,0` is `MO(_ADJUST)`; `4,0`, `4,1` and `9,1` are free (`KC_NO`) pending backlog item 8; `9,3` is `UPP_BSPC` = `LT(_UPPER, KC_BSPC)`. Knob clicks: Mute (left), Play (right). `4,2` is `MACOS_GLOBE`, a custom keycode sending consumer usage `AC_NEXT_KEYBOARD_LAYOUT_SELECT` (QMK has no Globe keycode).
+- **LOWER** (left thumb hold): arrows on H J K L, word jumps `A(KC_LEFT/RIGHT)` on Y and O, Home/End/PgUp/PgDn down the outer column `5,0`–`8,0` (on macOS Home/End scroll the document; line start/end is Cmd+arrow through the home row). Delete on Esc, ¡ on 1, ü on U, ñ on N, ¿ on /. Enter sends Shift+Enter, Backspace sends Option+Backspace. Right knob jumps by word.
 - **UPPER** (held Backspace): F1–F5 on the number row, F6–F10 on Q–T, F11/F12 on D/F. Left knob zooms (`G(-)`/`G(=)`), click `G(0)` resets.
-- **ADJUST** (held `]`): RGB toggle/mode/hue on the left number row, sat/bri/speed on the right. Mission Control on W, Dictation (`LCAG(KC_D)`) on R, Do Not Disturb (`LCAG(KC_N)`) on the left knob click; those two chords must be bound in System Settings. Right knob: previous/next track. Home row mod tapping terms: tap A S D F (`2,1`–`2,4`) to select Alt/Ctrl/Cmd/Shift (`HRM_SEL_*`), turn the left knob to step the selected term by 5 ms (`HRM_KNOB_UP/DN` in the encoder map), G `2,5` shows all four, B `3,5` resets them. The selection is RAM only and starts at Shift.
+- **ADJUST** (right outer thumb `9,0`): RGB toggle/mode/hue on the left number row, sat/bri/speed on the right. Mission Control on W, Dictation (`LCAG(KC_D)`) on R, Do Not Disturb (`LCAG(KC_N)`) on the left knob click; those two chords must be bound in System Settings. Right knob: previous/next track. Home row mod tapping terms: tap A S D F (`2,1`–`2,4`) to select Alt/Ctrl/Cmd/Shift (`HRM_SEL_*`), turn the left knob to step the selected term by 5 ms (`HRM_KNOB_UP/DN` in the encoder map), G `2,5` shows all four, B `3,5` resets them. The selection is RAM only and starts at Shift.
 - **ñ / ü:** `ES_NTIL`/`ES_UDIA` custom keycodes. macOS Option+N / Option+U is a dead key, so `tap_mac_accent()` taps it with Shift removed, then the letter with Shift restored (or added if Caps Word is on). ¿ and ¡ are plain `A(S(KC_SLSH))` and `A(KC_1)`.
 - **Key overrides:** Shift+Esc → `~` (Grave Escape was rejected: Cmd+Esc became Cmd+`, which macOS eats, so it couldn't cancel Cmd+Tab) and Option+' → `` ` ``.
 - **Encoder map** per layer, in `keymap.c`. BASE: left knob F14/F15 (macOS screen brightness, confirmed working), right knob volume.
@@ -70,7 +70,7 @@ Four layers: `_BASE`, `_LOWER`, `_UPPER`, `_ADJUST`. The ASCII diagram above eac
 `config.h`: `TAPPING_TERM 200`, `PERMISSIVE_HOLD` (per key), `CHORDAL_HOLD`, `FLOW_TAP_TERM 150`, `SPECULATIVE_HOLD` with `SPECULATIVE_HOLD_FLOW_TERM 150`. The callbacks in `keymap.c` single out the four Shift/Cmd keys (`LSFT_T(F)`, `RSFT_T(J)`, `LGUI_T(D)`, `RGUI_T(K)`):
 
 - `get_tapping_term()`: +150 ms for those four (chords at speed have almost no overlap; +80 wasn't enough; Hold On Other Key Press fired on bigrams like "fi"). All four terms are runtime values in `hrm_tuning.term[]` (defaults Alt/Ctrl 200, Cmd/Shift 350; range 100–500 in 5 ms steps), stored in the user EEPROM block and restored in `keyboard_post_init_user()`; `eeconfig_init_user_datablock()` writes the defaults when the block is missing or its version changes. QMK's Dynamic Tapping Term wasn't used because it only moves the global term and isn't saved; the Speculative Hold flow term can't be made runtime without editing core.
-- `get_permissive_hold()`: those four plus `ADJ_RBRC` only. On Alt/Ctrl it turned cross-hand rolls into holds ("also" → "aso").
+- `get_permissive_hold()`: those four only. On Alt/Ctrl it turned cross-hand rolls into holds ("also" → "aso").
 - `get_flow_tap_term()`: 0 for those four, otherwise Flow Tap settled them as taps before Chordal Hold saw the next key (broke fast Shift+/ and Cmd+V).
 - `get_speculative_hold()`: those four only, so Shift/Cmd-click is instant. Ctrl stays out because Ctrl+click is right-click on macOS.
 - `chordal_hold_layout`: thumbs and knob clicks are `*`, or Cmd+Space / Cmd+Enter settle as taps.
@@ -78,9 +78,9 @@ Four layers: `_BASE`, `_LOWER`, `_UPPER`, `_ADJUST`. The ASCII diagram above eac
 - `caps_word_press_user()` returns true for `TD(TD_CAPS)` without breaking the word; otherwise the dance would cancel Caps Word and then turn it back on.
 - A global `TAP_CODE_DELAY` was tried and removed: it stalled the knobs.
 
-### Known Adjust problem
+### Why Adjust is a plain thumb hold
 
-`ADJ_RBRC` with Permissive Hold loses `]` when it overlaps a key on the other hand that is pressed and released first (`a[i] = x` typed fast). Backlog item 1 moves Adjust to a plain `MO()` on a left thumb.
+Adjust used to be `LT(_ADJUST, KC_RBRC)` on `8,0` with Permissive Hold, which lost the `]` whenever it overlapped a key on the other hand that was pressed and released first (`a[i] = x` typed fast). It's now `MO(_ADJUST)` on the right outer thumb `9,0`, and `]` is a plain key.
 
 ## OLEDs and RGB (`soflecat.c`)
 
