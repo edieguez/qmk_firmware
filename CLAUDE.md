@@ -100,7 +100,7 @@ Most stray `.hex`/`.bin`/`.uf2` files at the repo root are local build artifacts
 
 ### Branches
 - **`master` is the only branch that matters.** It holds both boards in one straight line on top of upstream `master` (`3329239097`): the Sofle commits, the `#26481` cherry-pick, the Lily58 commits, then the notes. It's pushed; `origin/master` matches.
-- **`soflecat`** (recreated from `master` on 2026-11-17) is the working branch for the Sofle changes. The old remote branches (`origin/soflecat`, `origin/lily58`) are stale leftovers the user is deleting; don't compare against them or report their divergence.
+- **`soflecat`** (recreated from `master` on 2026-11-17) is the working branch for the Sofle changes and is ahead of `master`. The old remote branches (`origin/soflecat`, `origin/lily58`) are stale leftovers the user is deleting; don't compare against them or report their divergence.
 - All three `CLAUDE.md` files and the soflecat notes are tracked and committed. Commit note changes like any other change.
 
 ### How the user works (follow strictly)
@@ -123,10 +123,13 @@ Most stray `.hex`/`.bin`/`.uf2` files at the repo root are local build artifacts
 - **Something else in the user's setup has run `git stash` operations** (editor or another tool). If stashes or conflicts appear unexpectedly, inspect before acting.
 
 ### Open work
-1. **Lily58 macOS keymap** (`-km macos`): not yet tested on a Mac. Dictation and Do Not Disturb need binding in System Settings (Ctrl+Option+Cmd+D/N).
-2. **Sofle ñ/ü/¿/¡ on Lower, Delete on Lower+M** (`0bc5b94b40`): committed and pushed; a `soflecat_default.uf2` from 2026-11-16 sits in the repo root. Confirm it was flashed and tested.
+1. **Lily58 macOS keymap** (`-km macos`): not yet tested on a Mac. Dictation and Do Not Disturb need binding in System Settings (Ctrl+Option+Cmd+D/N). It also no longer fits when built with Homebrew avr-gcc 8.5 (see Technical traps).
+2. **Sofle, on the `soflecat` branch** (three commits on top of `master`, flashed and tested 2026-11-17, not pushed): Home/End/PgUp/PgDn on Lower's outer column, home row mod tapping terms tuned from Adjust with the left knob and saved to EEPROM, Adjust on the right outer thumb `9,0`, Delete on Lower+Esc. Fast-forward `master` and push when the user says so.
 3. **Sofle backlog:** `keyboards/soflecat/lessons-from-lily58cat.md`.
-   - Items 1, 2 and 4 to port: Adjust on a thumb, PgUp/PgDn on the Lower outer column, a screenshot key. Item 3 (ñ) is done.
-   - Items 5 and 8 to discuss: prune the 42 RGB effects, reassign the freed thumbs. Items 6 and 7 (notes refresh, `[row,col]` diagram) are done.
+   - Item 4 to port: a screenshot key (Cmd+Shift+5 or 4) on a free thumb.
+   - Item 8 to decide: the free thumbs `4,0`, `4,1`, `9,1` are `KC_NO`; Globe stays or moves.
+   - Item 5 to discuss: prune the 42 RGB effects.
+   - Item 11 to discuss: Lower duplicates (right knob vs Lower+Y/O, Lower+Enter vs home-row Shift+Enter, Lower+Backspace vs Alt+Backspace).
    - Item 9, roadmap: one OS-adaptive Sofle layout (Linux on a PC, macOS on a Mac).
+   - Done: items 1, 2, 3, 6, 7, 10, 12.
 4. **Drop the `#26481` cherry-pick** once upstream `master` contains it (it didn't as of the last `git fetch upstream`). A rebase drops it automatically.
