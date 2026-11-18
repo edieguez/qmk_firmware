@@ -25,6 +25,7 @@ enum layers {
 
 enum {
     TD_CAPS = 0, // Caps Word on tap, Caps Lock on double tap
+    TD_SHOT,     // screenshots, see shot_dance_finished()
 };
 
 enum custom_keycodes {
@@ -52,6 +53,9 @@ enum custom_keycodes {
 
 #define ES_IQUE A(S(KC_SLSH)) // ¿
 #define ES_IEXL A(KC_1)       // ¡
+// macOS screenshots: tap Cmd+Shift+4 (area), double tap Cmd+Shift+3 (whole
+// screen), hold Cmd+Shift+5 (capture panel).
+#define SCREENSHOT TD(TD_SHOT)
 
 // Backspace on tap, Upper on hold. Tap, then hold again to auto-repeat.
 // Kept out of get_permissive_hold(): a backspace rolled into the next
@@ -351,8 +355,19 @@ static void caps_dance_reset(tap_dance_state_t *state, void *user_data) {
     }
 }
 
+static void shot_dance_finished(tap_dance_state_t *state, void *user_data) {
+    if (state->count >= 2) {
+        tap_code16(G(S(KC_3)));
+    } else if (state->pressed && !state->interrupted) {
+        tap_code16(G(S(KC_5))); // still held when the dance settled
+    } else {
+        tap_code16(G(S(KC_4)));
+    }
+}
+
 tap_dance_action_t tap_dance_actions[] = {
     [TD_CAPS] = ACTION_TAP_DANCE_FN_ADVANCED(NULL, caps_dance_finished, caps_dance_reset),
+    [TD_SHOT] = ACTION_TAP_DANCE_FN_ADVANCED(NULL, shot_dance_finished, NULL),
 };
 
 // The dance settles about TAPPING_TERM after keydown. If TD(TD_CAPS) counted
@@ -466,7 +481,8 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
  * BASE. Home row mods on A S D F and J K L ;. Lower and Adjust are thumb
  * holds, Upper is held Backspace. Delete is Lower+Esc, backtick is Option+'.
  * The outer left thumbs type the recorded logins: tap for fast, with a home
- * row Shift held for the recorded pace.
+ * row Shift held for the recorded pace. Screenshots on the right thumb next
+ * to Adjust: tap area, double tap whole screen, hold the capture panel.
  * ,-----------------------------------------------------.                    ,-----------------------------------------------------.
  * | Esc  |   1  |   2  |   3  |   4  |   5  |                                |   6  |   7  |   8  |   9  |   0  |   -  |
  * |------+------+------+------+------+------|                                |------+------+------+------+------+------|
@@ -476,7 +492,7 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
  * |------+------+------+------+------+------|  Mute |                | Play  |------+------+------+------+------+------|
  * |  [   |   Z  |   X  |   C  |   V  |   B  |-------|                |-------|   N  |   M  |   ,  |   .  |   /  |  ]   |
  * `-----------------------------------------/       /                \      \-----------------------------------------'
- *                       |Login1|Login2|Globe |LOWER | Space|    |Enter |Bs/Upp|  =   |      |ADJUST|
+ *                       |Login1|Login2|Globe |LOWER | Space|    |Enter |Bs/Upp|  =   | Shot |ADJUST|
  *                       `----------------------------------'              '------''---------------------------'
  */
     [_BASE] = LAYOUT(
@@ -484,7 +500,7 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
         KC_TAB,      KC_Q,          KC_W,          KC_E,          KC_R,          KC_T,                                          KC_Y,          KC_U,          KC_I,          KC_O,          KC_P,            KC_BSLS,
         TD(TD_CAPS), LALT_T(KC_A),  LCTL_T(KC_S),  LGUI_T(KC_D),  LSFT_T(KC_F),  KC_G,                                          KC_H,          RSFT_T(KC_J),  RGUI_T(KC_K),  RCTL_T(KC_L),  RALT_T(KC_SCLN), KC_QUOTE,
         KC_LBRC,     KC_Z,          KC_X,          KC_C,          KC_V,          KC_B,    KC_MUTE,             KC_MPLY,        KC_N,          KC_M,          KC_COMMA,      KC_DOT,        KC_SLASH,        KC_RBRC,
-                                                    LOGIN_1,       LOGIN_2,      MACOS_GLOBE, MO(_LOWER), KC_SPACE, KC_ENTER, UPP_BSPC, KC_EQUAL, KC_NO,     MO(_ADJUST)
+                                                    LOGIN_1,       LOGIN_2,      MACOS_GLOBE, MO(_LOWER), KC_SPACE, KC_ENTER, UPP_BSPC, KC_EQUAL, SCREENSHOT, MO(_ADJUST)
     ),
 
 /*

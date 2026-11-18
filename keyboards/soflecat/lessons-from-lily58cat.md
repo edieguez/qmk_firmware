@@ -23,7 +23,7 @@ than the Lily58 (`4,0`/`9,0`).
 │ 2,0 │ 2,1 │ 2,2 │ 2,3 │ 2,4 │ 2,5 │             │ 7,5 │ 7,4 │ 7,3 │ 7,2 │ 7,1 │ 7,0 │
 │ 3,0 │ 3,1 │ 3,2 │ 3,3 │ 3,4 │ 3,5 │ 4,5 │ │ 9,5 │ 8,5 │ 8,4 │ 8,3 │ 8,2 │ 8,1 │ 8,0 │
             │ 4,0 │ 4,1 │ 4,2 │ 4,3 │ 4,4 │ │ 9,4 │ 9,3 │ 9,2 │ 9,1 │ 9,0 │
-BASE today: │ Lg1 │ Lg2 │Globe│Lower│Space│ │Enter│Bs/Up│  =  │  -  │ Adj │
+BASE today: │ Lg1 │ Lg2 │Globe│Lower│Space│ │Enter│Bs/Up│  =  │Shot │ Adj │
 ```
 
 ## Part 1: lessons to port
@@ -82,12 +82,13 @@ BASE today: │ Lg1 │ Lg2 │Globe│Lower│Space│ │Enter│Bs/Up│  =  
      That version sends AltGr for Linux US International, so the sending part
      differs.
 
-4. **A screenshot key** — open.
+4. **A screenshot key** — done (2026-11-19): a tap dance on the right
+   thumb `9,1`, the last blank key. Tap Cmd+Shift+4 (area), double tap
+   Cmd+Shift+3 (whole screen), hold Cmd+Shift+5 (capture panel).
    - The Lily has Print Screen on the far left thumb (`4,1` there). The macOS
      equivalent is Cmd+Shift+5 (`G(S(KC_5))`, the capture panel with area,
      window and recording), or Cmd+Shift+4 (`G(S(KC_4))`) for straight area
      capture.
-   - Candidate slot: a far left thumb freed by item 2 (`4,0` or `4,1`).
 
 ## Part 2: more improvements, to discuss
 
@@ -108,10 +109,9 @@ BASE today: │ Lg1 │ Lg2 │Globe│Lower│Space│ │Enter│Bs/Up│  =  
 7. **Use the `[row,col]` notation in this board's notes** — done. The
    diagram above is in `CLAUDE.md`.
 
-8. **Reassign the freed thumbs** — open, to discuss. `9,0` is Adjust and
-   `4,0`/`4,1` hold the login macros (item 13); only `9,1` is still free.
-   Candidates: the screenshot key (item 4) and the Globe key `4,2` (keep,
-   move or drop). On the Lily the thumbs
+8. **Reassign the freed thumbs** — done (2026-11-17). `9,0` is Adjust,
+   `4,0`/`4,1` the login macros (item 13), `4,2` Globe and `9,1` the
+   screenshot panel (item 4). No thumb is free. On the Lily the thumbs
    ended up as Print Screen, Adjust, Lower, Space and Enter,
    Backspace/Upper, `=`, Super.
 
