@@ -33,7 +33,7 @@ enum custom_keycodes {
     MACOS_GLOBE = SAFE_RANGE,
     ES_NTIL, // ñ and ü: Option dead key, then the letter
     ES_UDIA,
-    // Home row mod tapping terms, see hrm_tuning. Selectors in the order of
+    // Home row mod tapping terms, see user_config. Selectors in the order of
     // enum hrm_mod, the knob steps, then show and reset.
     HRM_SEL_ALT,
     HRM_SEL_CTRL,
@@ -43,6 +43,11 @@ enum custom_keycodes {
     HRM_KNOB_DN,
     HRM_SHOW,
     HRM_RESET,
+    // Login macros, see login_t. Play on the BASE thumbs, record on Adjust.
+    LOGIN_1,
+    LOGIN_2,
+    LOGIN_REC_1,
+    LOGIN_REC_2,
 };
 
 #define ES_IQUE A(S(KC_SLSH)) // ¿
@@ -71,33 +76,69 @@ enum hrm_mod { HRM_ALT, HRM_CTRL, HRM_CMD, HRM_SHIFT, HRM_MOD_COUNT };
     { [HRM_ALT] = TAPPING_TERM, [HRM_CTRL] = TAPPING_TERM, [HRM_CMD] = TAPPING_TERM + 150, [HRM_SHIFT] = TAPPING_TERM + 150 }
 
 static const char *const hrm_mod_name[HRM_MOD_COUNT] = {"ALT", "CTRL", "CMD", "SHIFT"};
+static const uint16_t    hrm_term_default[HRM_MOD_COUNT] = HRM_TERM_DEFAULTS;
+
+// Login macros: two recorded key sequences on the outer left thumbs. Tap
+// plays as fast as the host takes it; with a home row Shift held it plays at
+// the recorded pace. Adjust + the same thumb records (press again to stop).
+// Each key is stored with the modifiers held at the time and the gap since
+// the previous key.
+#define LOGIN_SLOTS 2
+#define LOGIN_MAX_KEYS 32
+#define LOGIN_GAP_UNIT_MS 10 // gap[] unit; 250 units = 2.5 s max
 
 typedef struct {
+    uint8_t  len;
+    uint8_t  reserved;
+    uint16_t keys[LOGIN_MAX_KEYS]; // basic keycode with the QK_MODS bits
+    uint8_t  gap[LOGIN_MAX_KEYS];  // time before the key, in LOGIN_GAP_UNIT_MS
+} login_t;
+
+// Everything kept in the user EEPROM block.
+typedef struct {
     uint16_t term[HRM_MOD_COUNT];
-} hrm_tuning_t;
-_Static_assert(sizeof(hrm_tuning_t) == EECONFIG_USER_DATA_SIZE, "hrm_tuning_t must fill the user EEPROM block");
+    login_t  login[LOGIN_SLOTS];
+} user_config_t;
+_Static_assert(sizeof(user_config_t) == EECONFIG_USER_DATA_SIZE, "user_config_t must fill the user EEPROM block");
 
-static hrm_tuning_t hrm_tuning  = {.term = HRM_TERM_DEFAULTS};
-static enum hrm_mod hrm_selected = HRM_SHIFT; // what the knob adjusts
+static user_config_t user_config     = {.term = HRM_TERM_DEFAULTS};
+static enum hrm_mod  hrm_selected    = HRM_SHIFT; // what the knob adjusts
+static int8_t        login_recording = -1;        // slot being recorded, or -1
+static uint32_t      login_last_key_at;
 
-static void hrm_tuning_save(void) {
-    eeconfig_update_user_datablock(&hrm_tuning, 0, sizeof(hrm_tuning));
+static void hrm_terms_save(void) {
+    eeconfig_update_user_datablock(user_config.term, offsetof(user_config_t, term), sizeof(user_config.term));
+}
+
+static void login_save(uint8_t slot) {
+    eeconfig_update_user_datablock(&user_config.login[slot], offsetof(user_config_t, login) + slot * sizeof(login_t), sizeof(login_t));
+}
+
+static void hrm_terms_reset(void) {
+    memcpy(user_config.term, hrm_term_default, sizeof(user_config.term));
+    hrm_terms_save();
 }
 
 // QMK calls this when the block is missing or EECONFIG_USER_DATA_VERSION
-// changed.
+// changed: default terms, empty logins.
 void eeconfig_init_user_datablock(void) {
-    static const uint16_t defaults[HRM_MOD_COUNT] = HRM_TERM_DEFAULTS;
-    memcpy(hrm_tuning.term, defaults, sizeof(hrm_tuning.term));
-    hrm_tuning_save();
+    memset(&user_config, 0, sizeof(user_config));
+    memcpy(user_config.term, hrm_term_default, sizeof(user_config.term));
+    eeconfig_update_user_datablock(&user_config, 0, sizeof(user_config));
 }
 
 void keyboard_post_init_user(void) {
-    eeconfig_read_user_datablock(&hrm_tuning, 0, sizeof(hrm_tuning));
+    eeconfig_read_user_datablock(&user_config, 0, sizeof(user_config));
     for (uint8_t i = 0; i < HRM_MOD_COUNT; i++) {
-        if (hrm_tuning.term[i] < HRM_TERM_MIN || hrm_tuning.term[i] > HRM_TERM_MAX) {
-            eeconfig_init_user_datablock();
-            return;
+        if (user_config.term[i] < HRM_TERM_MIN || user_config.term[i] > HRM_TERM_MAX) {
+            hrm_terms_reset();
+            break;
+        }
+    }
+    for (uint8_t slot = 0; slot < LOGIN_SLOTS; slot++) {
+        if (user_config.login[slot].len > LOGIN_MAX_KEYS) {
+            user_config.login[slot].len = 0;
+            login_save(slot);
         }
     }
 }
@@ -109,18 +150,95 @@ static void hrm_term_set(enum hrm_mod mod, uint16_t term) {
     } else if (term > HRM_TERM_MAX) {
         term = HRM_TERM_MAX;
     }
-    if (term != hrm_tuning.term[mod]) {
-        hrm_tuning.term[mod] = term;
-        hrm_tuning_save();
+    if (term != user_config.term[mod]) {
+        user_config.term[mod] = term;
+        hrm_terms_save();
     }
-    oled_show_value(hrm_mod_name[mod], hrm_tuning.term[mod]);
+    oled_show_value(hrm_mod_name[mod], user_config.term[mod]);
 }
 
 // All four, one per two OLED rows.
 static void hrm_terms_show(void) {
     char text[48];
-    snprintf(text, sizeof(text), "%s\n%u\n%s\n%u\n%s\n%u\n%s\n%u", hrm_mod_name[HRM_ALT], hrm_tuning.term[HRM_ALT], hrm_mod_name[HRM_CTRL], hrm_tuning.term[HRM_CTRL], hrm_mod_name[HRM_CMD], hrm_tuning.term[HRM_CMD], hrm_mod_name[HRM_SHIFT], hrm_tuning.term[HRM_SHIFT]);
+    snprintf(text, sizeof(text), "%s\n%u\n%s\n%u\n%s\n%u\n%s\n%u", hrm_mod_name[HRM_ALT], user_config.term[HRM_ALT], hrm_mod_name[HRM_CTRL], user_config.term[HRM_CTRL], hrm_mod_name[HRM_CMD], user_config.term[HRM_CMD], hrm_mod_name[HRM_SHIFT], user_config.term[HRM_SHIFT]);
     oled_show_message(text);
+}
+
+static void login_stop_recording(void) {
+    uint8_t slot    = login_recording;
+    login_recording = -1;
+    login_save(slot);
+    oled_dismiss_message();
+    oled_show_value("SAVED", user_config.login[slot].len);
+}
+
+static void login_start_recording(uint8_t slot) {
+    char text[8];
+    if (login_recording >= 0) {
+        login_stop_recording();
+    }
+    user_config.login[slot].len = 0;
+    login_recording             = slot;
+    snprintf(text, sizeof(text), "REC\n%u", slot + 1);
+    oled_show_message_sticky(text);
+}
+
+// Called for every key press while recording. Basic keys are stored with
+// the modifiers held at the time; mod-tap and layer-tap taps count as their
+// tap key, holds don't (their modifier shows up in get_mods() on the next
+// key). Everything else (layers, custom keys, RGB) is skipped.
+static void login_record_key(uint16_t keycode, keyrecord_t *record) {
+    if (IS_QK_MOD_TAP(keycode)) {
+        if (record->tap.count == 0) {
+            return;
+        }
+        keycode = QK_MOD_TAP_GET_TAP_KEYCODE(keycode);
+    } else if (IS_QK_LAYER_TAP(keycode)) {
+        if (record->tap.count == 0) {
+            return;
+        }
+        keycode = QK_LAYER_TAP_GET_TAP_KEYCODE(keycode);
+    }
+    if (keycode <= KC_TRNS || !IS_QK_BASIC(keycode) || IS_MODIFIER_KEYCODE(keycode)) {
+        return;
+    }
+
+    login_t *login = &user_config.login[login_recording];
+    uint8_t  mods  = get_mods() | get_weak_mods() | get_oneshot_mods();
+    mods           = (mods & 0x0F) | (mods >> 4); // right mods count as left
+    uint32_t gap   = login->len == 0 ? 0 : timer_elapsed32(login_last_key_at) / LOGIN_GAP_UNIT_MS;
+
+    login->keys[login->len] = ((uint16_t)mods << 8) | keycode;
+    login->gap[login->len]  = gap > 250 ? 250 : gap;
+    login->len++;
+    login_last_key_at = timer_read32();
+
+    if (login->len == LOGIN_MAX_KEYS) {
+        login_stop_recording();
+        oled_show_message("FULL");
+    }
+}
+
+static void login_play(uint8_t slot) {
+    const login_t *login = &user_config.login[slot];
+    if (login->len == 0) {
+        oled_show_value("EMPTY", slot + 1);
+        return;
+    }
+    uint8_t mods  = get_mods();
+    bool    paced = (mods | get_weak_mods() | get_oneshot_mods()) & MOD_MASK_SHIFT;
+    // The Shift that picks the paced mode must not capitalise the login.
+    del_mods(MOD_MASK_SHIFT);
+    del_weak_mods(MOD_MASK_SHIFT);
+    del_oneshot_mods(MOD_MASK_SHIFT);
+    send_keyboard_report();
+    for (uint8_t i = 0; i < login->len; i++) {
+        if (paced && login->gap[i]) {
+            wait_ms(login->gap[i] * LOGIN_GAP_UNIT_MS);
+        }
+        tap_code16(login->keys[i]);
+    }
+    set_mods(mods);
 }
 
 // Option+N / Option+U is a dead key on macOS; the letter after it gets the
@@ -137,6 +255,10 @@ static void tap_mac_accent(uint16_t dead_key, uint8_t letter) {
 }
 
 bool process_record_user(uint16_t keycode, keyrecord_t *record) {
+    if (login_recording >= 0 && record->event.pressed && !(keycode >= LOGIN_1 && keycode <= LOGIN_REC_2)) {
+        login_record_key(keycode, record);
+    }
+
     switch (keycode) {
         case MACOS_GLOBE:
             if (record->event.pressed) {
@@ -154,13 +276,13 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
         case HRM_SEL_ALT ... HRM_SEL_SHIFT:
             if (record->event.pressed) {
                 hrm_selected = keycode - HRM_SEL_ALT;
-                oled_show_value(hrm_mod_name[hrm_selected], hrm_tuning.term[hrm_selected]);
+                oled_show_value(hrm_mod_name[hrm_selected], user_config.term[hrm_selected]);
             }
             return false;
         case HRM_KNOB_UP:
         case HRM_KNOB_DN:
             if (record->event.pressed) {
-                hrm_term_set(hrm_selected, hrm_tuning.term[hrm_selected] + (keycode == HRM_KNOB_UP ? HRM_TERM_STEP : -HRM_TERM_STEP));
+                hrm_term_set(hrm_selected, user_config.term[hrm_selected] + (keycode == HRM_KNOB_UP ? HRM_TERM_STEP : -HRM_TERM_STEP));
             }
             return false;
         case HRM_SHOW:
@@ -170,8 +292,30 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
             return false;
         case HRM_RESET:
             if (record->event.pressed) {
-                eeconfig_init_user_datablock();
+                hrm_terms_reset();
                 hrm_terms_show();
+            }
+            return false;
+        case LOGIN_1:
+        case LOGIN_2:
+            if (record->event.pressed) {
+                uint8_t slot = keycode - LOGIN_1;
+                if (login_recording == slot) {
+                    login_stop_recording();
+                } else {
+                    login_play(slot);
+                }
+            }
+            return false;
+        case LOGIN_REC_1:
+        case LOGIN_REC_2:
+            if (record->event.pressed) {
+                uint8_t slot = keycode - LOGIN_REC_1;
+                if (login_recording == slot) {
+                    login_stop_recording();
+                } else {
+                    login_start_recording(slot);
+                }
             }
             return false;
         default:
@@ -246,22 +390,22 @@ uint16_t get_flow_tap_term(uint16_t keycode, keyrecord_t *record, uint16_t prev_
     }
 }
 
-// Per-modifier terms from hrm_tuning. Everything else (the Caps dance, the
+// Per-modifier terms from user_config. Everything else (the Caps dance, the
 // layer taps) keeps TAPPING_TERM.
 uint16_t get_tapping_term(uint16_t keycode, keyrecord_t *record) {
     switch (keycode) {
         case LALT_T(KC_A):
         case RALT_T(KC_SCLN):
-            return hrm_tuning.term[HRM_ALT];
+            return user_config.term[HRM_ALT];
         case LCTL_T(KC_S):
         case RCTL_T(KC_L):
-            return hrm_tuning.term[HRM_CTRL];
+            return user_config.term[HRM_CTRL];
         case LGUI_T(KC_D):
         case RGUI_T(KC_K):
-            return hrm_tuning.term[HRM_CMD];
+            return user_config.term[HRM_CMD];
         case LSFT_T(KC_F):
         case RSFT_T(KC_J):
-            return hrm_tuning.term[HRM_SHIFT];
+            return user_config.term[HRM_SHIFT];
         default:
             return TAPPING_TERM;
     }
@@ -321,6 +465,8 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
 /*
  * BASE. Home row mods on A S D F and J K L ;. Lower and Adjust are thumb
  * holds, Upper is held Backspace. Delete is Lower+Esc, backtick is Option+'.
+ * The outer left thumbs type the recorded logins: tap for fast, with a home
+ * row Shift held for the recorded pace.
  * ,-----------------------------------------------------.                    ,-----------------------------------------------------.
  * | Esc  |   1  |   2  |   3  |   4  |   5  |                                |   6  |   7  |   8  |   9  |   0  |   -  |
  * |------+------+------+------+------+------|                                |------+------+------+------+------+------|
@@ -330,7 +476,7 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
  * |------+------+------+------+------+------|  Mute |                | Play  |------+------+------+------+------+------|
  * |  [   |   Z  |   X  |   C  |   V  |   B  |-------|                |-------|   N  |   M  |   ,  |   .  |   /  |  ]   |
  * `-----------------------------------------/       /                \      \-----------------------------------------'
- *                       |      |      |Globe |LOWER | Space|    |Enter |Bs/Upp|  =   |      |ADJUST|
+ *                       |Login1|Login2|Globe |LOWER | Space|    |Enter |Bs/Upp|  =   |      |ADJUST|
  *                       `----------------------------------'              '------''---------------------------'
  */
     [_BASE] = LAYOUT(
@@ -338,7 +484,7 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
         KC_TAB,      KC_Q,          KC_W,          KC_E,          KC_R,          KC_T,                                          KC_Y,          KC_U,          KC_I,          KC_O,          KC_P,            KC_BSLS,
         TD(TD_CAPS), LALT_T(KC_A),  LCTL_T(KC_S),  LGUI_T(KC_D),  LSFT_T(KC_F),  KC_G,                                          KC_H,          RSFT_T(KC_J),  RGUI_T(KC_K),  RCTL_T(KC_L),  RALT_T(KC_SCLN), KC_QUOTE,
         KC_LBRC,     KC_Z,          KC_X,          KC_C,          KC_V,          KC_B,    KC_MUTE,             KC_MPLY,        KC_N,          KC_M,          KC_COMMA,      KC_DOT,        KC_SLASH,        KC_RBRC,
-                                                    KC_NO,         KC_NO,        MACOS_GLOBE, MO(_LOWER), KC_SPACE, KC_ENTER, UPP_BSPC, KC_EQUAL, KC_NO,     MO(_ADJUST)
+                                                    LOGIN_1,       LOGIN_2,      MACOS_GLOBE, MO(_LOWER), KC_SPACE, KC_ENTER, UPP_BSPC, KC_EQUAL, KC_NO,     MO(_ADJUST)
     ),
 
 /*
@@ -397,7 +543,8 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
  * four, B resets them; the values are kept in EEPROM. Left knob click: Do Not
  * Disturb. Right knob: previous/next track. Dictation (Ctrl+Opt+Cmd+D) and Do
  * Not Disturb (Ctrl+Opt+Cmd+N) are chords that have to be bound in System
- * Settings.
+ * Settings. The outer left thumbs record their login: press to start, press
+ * again (or the thumb on BASE) to stop and save.
  * ,-----------------------------------------------------.                    ,-----------------------------------------------------.
  * |RGBTog|Mode- |Mode+ | Hue- | Hue+ |      |                                | Sat- | Sat+ | Bri- | Bri+ | Spd- | Spd+ |
  * |------+------+------+------+------+------|                                |------+------+------+------+------+------|
@@ -407,7 +554,7 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
  * |------+------+------+------+------+------|  DND  |                |       |------+------+------+------+------+------|
  * |      |      |      |      |      |Reset |-------|                |-------|      |      |      |      |      |      |
  * `-----------------------------------------/       /                \      \-----------------------------------------'
- *                       |      |      |      |      |      |    |      |      |      |      |ADJUST|
+ *                       | Rec1 | Rec2 |      |      |      |    |      |      |      |      |ADJUST|
  *                       `----------------------------------'              '------''---------------------------'
  */
     [_ADJUST] = LAYOUT(
@@ -415,7 +562,7 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
         KC_TRNS,  KC_TRNS, KC_MCTL, KC_TRNS,   LCAG(KC_D), KC_TRNS,                                     KC_TRNS, KC_TRNS, KC_TRNS,  KC_TRNS, KC_TRNS, KC_TRNS,
         KC_TRNS,  HRM_SEL_ALT, HRM_SEL_CTRL, HRM_SEL_CMD, HRM_SEL_SHIFT, HRM_SHOW,                        KC_TRNS, KC_TRNS, KC_TRNS,  KC_TRNS, KC_TRNS, KC_TRNS,
         KC_TRNS,  KC_TRNS, KC_TRNS, KC_TRNS,   KC_TRNS,    HRM_RESET, LCAG(KC_N),       KC_TRNS,           KC_TRNS, KC_TRNS, KC_TRNS,  KC_TRNS, KC_TRNS, KC_TRNS,
-                                    KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS,  KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS
+                                    LOGIN_REC_1, LOGIN_REC_2, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS,  KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS
     ),
 };
 

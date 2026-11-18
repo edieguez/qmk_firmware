@@ -23,7 +23,7 @@ than the Lily58 (`4,0`/`9,0`).
 │ 2,0 │ 2,1 │ 2,2 │ 2,3 │ 2,4 │ 2,5 │             │ 7,5 │ 7,4 │ 7,3 │ 7,2 │ 7,1 │ 7,0 │
 │ 3,0 │ 3,1 │ 3,2 │ 3,3 │ 3,4 │ 3,5 │ 4,5 │ │ 9,5 │ 8,5 │ 8,4 │ 8,3 │ 8,2 │ 8,1 │ 8,0 │
             │ 4,0 │ 4,1 │ 4,2 │ 4,3 │ 4,4 │ │ 9,4 │ 9,3 │ 9,2 │ 9,1 │ 9,0 │
-BASE today: │  -  │  -  │Globe│Lower│Space│ │Enter│Bs/Up│  =  │  -  │ Adj │
+BASE today: │ Lg1 │ Lg2 │Globe│Lower│Space│ │Enter│Bs/Up│  =  │  -  │ Adj │
 ```
 
 ## Part 1: lessons to port
@@ -108,9 +108,10 @@ BASE today: │  -  │  -  │Globe│Lower│Space│ │Enter│Bs/Up│  =  
 7. **Use the `[row,col]` notation in this board's notes** — done. The
    diagram above is in `CLAUDE.md`.
 
-8. **Reassign the freed thumbs** — open, to discuss. `9,0` is now Adjust;
-   `4,0`, `4,1` and `9,1` are still free. Candidates: the screenshot key
-   (item 4) and the Globe key `4,2` (keep, move or drop). On the Lily the thumbs
+8. **Reassign the freed thumbs** — open, to discuss. `9,0` is Adjust and
+   `4,0`/`4,1` hold the login macros (item 13); only `9,1` is still free.
+   Candidates: the screenshot key (item 4) and the Globe key `4,2` (keep,
+   move or drop). On the Lily the thumbs
    ended up as Print Screen, Adjust, Lower, Space and Enter,
    Backspace/Upper, `=`, Super.
 
@@ -174,6 +175,13 @@ BASE today: │  -  │  -  │Globe│Lower│Space│ │Enter│Bs/Up│  =  
     Previous/next track moved to the right knob on Adjust. Flow Tap stays
     compile-time, and the Speculative Hold flow term can't be made
     adjustable without editing core.
+
+13. **Two login macros, recorded on the keyboard and saved to EEPROM** —
+    done (2026-11-17). `4,0`/`4,1` on BASE type them (tap: fast; with a
+    home row Shift held: at the recorded pace). Adjust + the same thumb
+    records; the thumb again stops and saves. 32 keys per slot with
+    modifiers and the gap before each key. QMK's Dynamic Macros weren't
+    used: their buffer is RAM only and keeps no timing.
 
 ## Not applicable here
 

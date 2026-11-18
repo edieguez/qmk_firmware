@@ -124,10 +124,10 @@ Most stray `.hex`/`.bin`/`.uf2` files at the repo root are local build artifacts
 
 ### Open work
 1. **Lily58 macOS keymap** (`-km macos`): not yet tested on a Mac. Dictation and Do Not Disturb need binding in System Settings (Ctrl+Option+Cmd+D/N). It also no longer fits when built with Homebrew avr-gcc 8.5 (see Technical traps).
-2. **Sofle, on the `soflecat` branch** (three commits on top of `master`, flashed and tested 2026-11-17, not pushed): Home/End/PgUp/PgDn on Lower's outer column, home row mod tapping terms tuned from Adjust with the left knob and saved to EEPROM, Adjust on the right outer thumb `9,0`, Delete on Lower+Esc. Fast-forward `master` and push when the user says so.
+2. **Sofle, on the `soflecat` branch** (three commits on top of `master`, flashed and tested 2026-11-17, not pushed): Home/End/PgUp/PgDn on Lower's outer column, home row mod tapping terms tuned from Adjust with the left knob and saved to EEPROM, Adjust on the right outer thumb `9,0`, Delete on Lower+Esc, two login macros on the outer left thumbs. Fast-forward `master` and push when the user says so.
 3. **Sofle backlog:** `keyboards/soflecat/lessons-from-lily58cat.md`.
    - Item 4 to port: a screenshot key (Cmd+Shift+5 or 4) on a free thumb.
-   - Item 8 to decide: the free thumbs `4,0`, `4,1`, `9,1` are `KC_NO`; Globe stays or moves.
+   - Item 8 to decide: `9,1` is the last free thumb (`KC_NO`); Globe stays or moves.
    - Item 5 to discuss: prune the 42 RGB effects.
    - Item 11 to discuss: Lower duplicates (right knob vs Lower+Y/O, Lower+Enter vs home-row Shift+Enter, Lower+Backspace vs Alt+Backspace).
    - Item 9, roadmap: one OS-adaptive Sofle layout (Linux on a PC, macOS on a Mac).

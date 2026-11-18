@@ -18,14 +18,19 @@
 
 #include "quantum.h"
 
-// Show a message on the master OLED for a moment, replacing the status
-// screen, the way RGB changes are shown. The screen is 5 columns wide;
-// oled_show_value() puts `label` over `value`, oled_show_message() takes
-// preformatted text with newlines.
+// Show a message on the master OLED, replacing the status screen, the way
+// RGB changes are shown. The screen is 5 columns wide; oled_show_value()
+// puts `label` over `value`, oled_show_message() takes preformatted text
+// with newlines. Both last 1.5 s; a sticky message stays until dismissed or
+// replaced by another message.
 #ifdef OLED_ENABLE
 void oled_show_value(const char *label, uint16_t value);
 void oled_show_message(const char *text);
+void oled_show_message_sticky(const char *text);
+void oled_dismiss_message(void);
 #else
 static inline void oled_show_value(const char *label, uint16_t value) {}
 static inline void oled_show_message(const char *text) {}
+static inline void oled_show_message_sticky(const char *text) {}
+static inline void oled_dismiss_message(void) {}
 #endif

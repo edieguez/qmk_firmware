@@ -55,7 +55,7 @@
 #define SPECULATIVE_HOLD
 #define SPECULATIVE_HOLD_FLOW_TERM 150
 
-// Runtime tuning kept across reboots (hrm_tuning in keymap.c). Bump the
-// version to throw stored values away.
-#define EECONFIG_USER_DATA_SIZE 8
-#define EECONFIG_USER_DATA_VERSION 2
+// Runtime settings kept across reboots (user_config in keymap.c: tapping
+// terms and the two login macros). Bump the version to throw them away.
+#define EECONFIG_USER_DATA_SIZE 204
+#define EECONFIG_USER_DATA_VERSION 3

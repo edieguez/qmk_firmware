@@ -20,9 +20,9 @@
 
 #ifdef OLED_ENABLE
 
-// A two-line message (label, then value) that replaces the status screen
-// on the master OLED for a moment. RGB changes use it, and so does the
-// keymap through oled_show_value().
+// A short message that replaces the status screen on the master OLED for a
+// moment, or until dismissed for a sticky one. RGB changes use it, and so
+// does the keymap (see soflecat.h).
 #define OLED_MESSAGE_BUF_LEN 48
 #define OLED_MESSAGE_DISPLAY_MS 1500
 
@@ -31,8 +31,11 @@ static uint32_t oled_message_shown_until = 0;
 // Bumped per message. oled_write() only touches the cells it draws, so
 // render_status() clears the screen when this changes.
 static uint8_t oled_message_version = 0;
+static bool    oled_message_sticky  = false;
 
+// Any new message, sticky or not, replaces the current one.
 static void oled_message_posted(void) {
+    oled_message_sticky      = false;
     oled_message_shown_until = timer_read32() + OLED_MESSAGE_DISPLAY_MS;
     oled_message_version++;
 }
@@ -40,6 +43,16 @@ static void oled_message_posted(void) {
 void oled_show_message(const char *text) {
     snprintf(oled_message, sizeof(oled_message), "%s", text);
     oled_message_posted();
+}
+
+void oled_show_message_sticky(const char *text) {
+    oled_show_message(text);
+    oled_message_sticky = true;
+}
+
+void oled_dismiss_message(void) {
+    oled_message_sticky      = false;
+    oled_message_shown_until = timer_read32();
 }
 
 static void oled_show_text(const char *label, const char *text) {
@@ -111,7 +124,7 @@ static const char *oled_message_current(void) {
 #ifdef RGB_MATRIX_ENABLE
     poll_rgb_status();
 #endif
-    if (timer_expired32(timer_read32(), oled_message_shown_until)) {
+    if (!oled_message_sticky && timer_expired32(timer_read32(), oled_message_shown_until)) {
         return NULL;
     }
     return oled_message;
