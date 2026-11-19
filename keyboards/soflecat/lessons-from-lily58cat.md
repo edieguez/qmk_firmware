@@ -59,10 +59,13 @@ BASE today: │ Lg1 │ Lg2 │Globe│Lower│Space│ │Enter│Bs/Up│  =  
      slots on the left hand. The RGB status messages on the OLED keep working,
      because the keycodes don't change.
 
-2. **Lower's outer column: Home, End, PgUp, PgDn** — done (2026-11-17).
+2. **Lower's outer column: line start, line end, PgUp, PgDn** — done
+   (2026-11-17, line keys fixed 2026-11-19).
    `5,0` Home, `6,0` End, `7,0` PgUp, `8,0` PgDn, as on the Lily; the
    Cmd+arrow line and document jumps were dropped (the home row mods give
-   Cmd+arrow anyway). The BASE thumbs `4,0`, `4,1`, `9,1`, `9,0` are now
+   Cmd+arrow anyway). Changed on 2026-11-19: `5,0`/`6,0` send Cmd+Left/Right,
+   because macOS Home/End only scroll and never move to the line start or
+   end. The BASE thumbs `4,0`, `4,1`, `9,1`, `9,0` are now
    `KC_NO`, waiting for item 8.
 
 3. **ñ, ¿, ¡ on Lower** — open.

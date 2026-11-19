@@ -504,14 +504,15 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
     ),
 
 /*
- * LOWER. Arrows with word jumps beside them; Home, End, PgUp, PgDn on the
- * outer column. Backspace sends Option+Backspace, Enter sends Shift+Enter.
- * The right knob jumps by word.
+ * LOWER. Arrows with word jumps beside them; line start, line end (Cmd+Left/
+ * Right: macOS Home/End only scroll), PgUp, PgDn on the outer column.
+ * Backspace sends Option+Backspace, Enter sends Shift+Enter. The right knob
+ * jumps by word.
  * ñ on N, ü on U, ¿ on /, ¡ on 1 (Option sequences); Delete on Esc.
  * ,-----------------------------------------------------.                    ,-----------------------------------------------------.
- * | Del  |   ¡  |      |      |      |      |                                |      |      |      |      |      | Home |
+ * | Del  |   ¡  |      |      |      |      |                                |      |      |      |      |      |LnStrt|
  * |------+------+------+------+------+------|                                |------+------+------+------+------+------|
- * |      |      |      |      |      |      |                                | wLeft|   ü  |      |wRight|      | End  |
+ * |      |      |      |      |      |      |                                | wLeft|   ü  |      |wRight|      |LnEnd |
  * |------+------+------+------+------+------|                                |------+------+------+------+------+------|
  * |      |      |      |      |      |      |-------.                ,-------|  Left|  Down|   Up | Right|      | PgUp |
  * |------+------+------+------+------+------|       |                |       |------+------+------+------+------+------|
@@ -521,8 +522,8 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
  *                       `----------------------------------'              '------''---------------------------'
  */
     [_LOWER] = LAYOUT(
-        KC_DEL,   ES_IEXL, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS,                                     KC_TRNS,    KC_TRNS, KC_TRNS,   KC_TRNS,     KC_TRNS,    KC_HOME,
-        KC_TRNS,  KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS,                                     A(KC_LEFT), ES_UDIA, KC_TRNS,   A(KC_RIGHT), KC_TRNS,    KC_END,
+        KC_DEL,   ES_IEXL, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS,                                     KC_TRNS,    KC_TRNS, KC_TRNS,   KC_TRNS,     KC_TRNS,    G(KC_LEFT),
+        KC_TRNS,  KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS,                                     A(KC_LEFT), ES_UDIA, KC_TRNS,   A(KC_RIGHT), KC_TRNS,    G(KC_RIGHT),
         KC_TRNS,  KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS,                                     KC_LEFT,    KC_DOWN, KC_UP,     KC_RIGHT,    KC_TRNS,    KC_PGUP,
         KC_TRNS,  KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS,          KC_TRNS,           ES_NTIL,    KC_TRNS,    KC_TRNS, KC_TRNS,     ES_IQUE,    KC_PGDN,
                                     KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, KC_TRNS, S(KC_ENTER),    A(KC_BSPC), KC_TRNS, KC_TRNS, KC_TRNS

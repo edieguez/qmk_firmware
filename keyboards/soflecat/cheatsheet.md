@@ -40,7 +40,8 @@ Lock. One tap also turns Caps Lock off.
 ## Lower (hold `4,3`)
 
 - **Arrows** on H J K L; **word jumps** on Y and O; right knob jumps by word.
-- **Home, End, PgUp, PgDn** down the right outer column.
+- **Line start, line end, PgUp, PgDn** down the right outer column (line
+  start/end are Cmd+Left/Right).
 - **Delete** on Esc. **Option+Backspace** (delete word) on Backspace.
   **Shift+Enter** on Enter.
 - **ñ** on N, **ü** on U, **¿** on /, **¡** on 1.
